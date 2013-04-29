@@ -14,7 +14,11 @@ module Gekko
 
     def initialize(ip = '0.0.0.0', port = 6943, pairs = Gekko::DEFAULT_PAIRS)
 
-      EventMachine.run do
+      #      EventMachine.run do
+
+      unless EventMachine.reactor_running?
+        raise 'The server must be started inside a running reactor, create it inside a EventMachine.run { } block'
+      else
         logger.info("Starting Gekko v#{Gekko::VERSION} with PID #{Process.pid}") 
 
         Signal.trap('INT')  { shutdown }
@@ -33,7 +37,9 @@ module Gekko
           #c.redis  = redis
           c.log_connection
         end
+        #      end
       end
+
     end
 
     def shutdown

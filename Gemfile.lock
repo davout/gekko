@@ -1,3 +1,13 @@
+PATH
+  remote: .
+  specs:
+    gekko (0.0.0)
+      em-hiredis
+      em-logger
+      eventmachine
+      oj
+      uuid
+
 GEM
   remote: http://rubygems.org/
   specs:
@@ -27,9 +37,5 @@ PLATFORMS
   ruby
 
 DEPENDENCIES
-  em-hiredis
-  em-logger
-  eventmachine
-  oj
+  gekko!
   rspec
-  uuid

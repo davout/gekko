@@ -2,5 +2,7 @@
 
 require 'gekko'
 
-Gekko::Server.new
+EventMachine.run do
+  Gekko::Server.new
+end
 
