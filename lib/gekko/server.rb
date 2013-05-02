@@ -2,6 +2,7 @@ require 'eventmachine'
 require 'em-hiredis'
 
 require 'gekko/connection'
+require 'gekko/command'
 require 'gekko/default_pairs'
 require 'gekko/logger'
 require 'gekko/matcher'

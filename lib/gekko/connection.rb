@@ -28,7 +28,12 @@ module Gekko
 
       else
         begin
-          parsed = Oj.load(data)
+          cmd = Gekko::Command.parse(data)
+          
+          if cmd.type == :order
+            redis.push("orders:#{cmd.args['pair']}", cmd.args.to_json)
+          end
+
         rescue
           logger.error("Received invalid message for connection [#{connection_id}], disconnecting.")
           send_data("Invalid message.\n")
