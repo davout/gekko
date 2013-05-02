@@ -43,7 +43,8 @@ module Gekko
     def execute_order(order)
 
       # Post order to the book
-      redis.zadd("#{@pair.downcase}:book:#{order.type}", order.price, order.to_json)
+      redis.set(order.id, order.to_json)
+      redis.zadd("#{@pair.downcase}:book:#{order.type}", order.price, order.id)
       logger.info("Posted order #{order.to_json} to the #{@pair} book.")
 
     end

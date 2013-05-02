@@ -2,7 +2,7 @@ module Gekko
   module Models
     class Order
 
-      attr_accessor :pair, :type, :amount, :price
+      attr_accessor :id, :pair, :type, :amount, :price
 
       def self.parse(data)
         parsed = Oj.load(data)
@@ -14,7 +14,8 @@ module Gekko
         @type   = type
         @amount = amount
         @price  = price
-        
+        @id     = UUID.generate
+
         raise 'Orders must supply a pair'                               unless @pair
         raise 'Price must either be a positive integer or be omitted'   if (@price && (!@price.is_a?(Fixnum) || (@price <= 0)))
         raise 'Type must be either buy or sell'                         unless ['buy', 'sell'].include?(@type)
@@ -26,7 +27,8 @@ module Gekko
           'pair'   => @pair,
           'amount' => @amount,
           'price'  => @price,
-          'type'   => @type
+          'type'   => @type,
+          'id'     => @id
         })
       end
 

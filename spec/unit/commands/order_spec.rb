@@ -10,17 +10,6 @@ describe 'Gekko::Commands::Order' do
     @c = Gekko::Command.build(cmd, @connection)
   end
 
-  describe '#to_json' do
-    it 'should call Oj.dump' do
-      Oj.should_receive(:dump).once.and_call_original
-      @c.to_json
-    end
-
-    it 'should render the command as JSON' do  
-      Oj.load(@c.to_json).should eql(Oj.load('{"pair":"BTCEUR", "amount":100000000, "price":null, "type":"buy"}'))
-    end
-  end
-
   describe '#execute' do
     before(:each) do
       @redis = mock(EventMachine::Hiredis)
@@ -28,7 +17,7 @@ describe 'Gekko::Commands::Order' do
     end
 
     it 'should push the order on a redis queue' do
-      @redis.should_receive(:push_tail).once.with('btceur:orders', '{"pair":"BTCEUR","amount":100000000,"price":null,"type":"buy"}')
+      @redis.should_receive(:push_tail).once.with('btceur:orders', @c.order.id)
       @c.execute
     end
   end

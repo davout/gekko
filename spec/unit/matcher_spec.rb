@@ -18,10 +18,18 @@ describe 'Gekko::Matcher' do
 
   describe '#execute_order' do
     it 'should add orders to the book' do
+      order   = Gekko::Models::Order.new('BTCXRP', 'buy', 100, 100)
       matcher = Gekko::Matcher.new('BTCXRP')
-      matcher.redis.should_receive(:zadd).once.with('btcxrp:book:buy', 100, '{"pair":"BTCXRP","amount":100,"price":100,"type":"buy"}')
-      matcher.execute_order(Gekko::Models::Order.new('BTCXRP', 'buy', 100, 100))
+
+      matcher.redis.should_receive(:zadd).once.with('btcxrp:book:buy', 100, order.id)
+      matcher.redis.should_receive(:set).once.with(order.id, order.to_json)
+
+      matcher.execute_order(order)
     end
+
+    #it 'should push the order back to the client' do
+    #  matcher = Gekko::Matcher.new('BTCXRP')
+    #end
   end
 end
 
