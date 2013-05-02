@@ -16,7 +16,6 @@ module Gekko
       self.pair = pair
       
       connect_redis
-      match!
     end
 
     def match!
@@ -29,7 +28,8 @@ module Gekko
       end
 
       while !terminated do
-        redis.blpop("#{@pair.downcase}:orders")
+        order = Gekko::Models::Order.parse(redis.blpop("#{@pair.downcase}:orders"))
+        execute_order(order)
       end
 
       logger.warn("#{pair} matcher terminated.")
@@ -38,6 +38,14 @@ module Gekko
 
     def connect_redis
       self.redis = Redis.connect
+    end
+
+    def execute_order(order)
+
+      # Post order to the book
+      redis.zadd("#{@pair.downcase}:book:#{order.type}", order.price, order.to_json)
+      logger.info("Posted order #{order.to_json} to the #{@pair} book.")
+
     end
   end
 end
