@@ -10,14 +10,17 @@ RSpec.configure do |config|
   def silence_logger
     begin
       Gekko::Logger.logging_enabled = false
+      Gekko::SynchronousLogger.logging_enabled = false
       yield
     ensure
       Gekko::Logger.logging_enabled = true
+      Gekko::SynchronousLogger.logging_enabled = true
     end
   end
 
   def enable_logger
     Gekko::Logger.logging_enabled = true
+    Gekko::SynchronousLogger.logging_enabled = true
     yield
   end
 

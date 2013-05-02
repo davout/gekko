@@ -5,7 +5,9 @@ PATH
       em-hiredis
       em-logger
       eventmachine
+      hiredis
       oj
+      redis
       uuid
 
 GEM
@@ -21,6 +23,7 @@ GEM
     macaddr (1.6.1)
       systemu (~> 2.5.0)
     oj (2.0.11)
+    redis (3.0.3)
     rspec (2.13.0)
       rspec-core (~> 2.13.0)
       rspec-expectations (~> 2.13.0)

@@ -18,7 +18,14 @@ Gem::Specification.new do |s|
   s.required_rubygems_version = '>= 1.3.6'
 
   s.add_dependency 'eventmachine'
+
+  # For code that runs inside the EM reactor
   s.add_dependency 'em-hiredis'
+
+  # For code that runs in a separate Ruby process
+  s.add_dependency 'redis'
+  s.add_dependency 'hiredis'
+
   s.add_dependency 'em-logger'
   s.add_dependency 'uuid'
   s.add_dependency 'oj'
