@@ -1,26 +1,28 @@
 require_relative '../spec_helper'
 
 describe 'Gekko::Command' do
+
+  before(:each) do
+    logger     = mock(Logger)
+    @connection = mock(Gekko::Connection)
+
+    logger.stub!(:error)
+    @connection.stub(:logger).and_return(logger)
+  end
+
   describe '.parse' do
     it 'should parse a command' do
       cmd = '{ "command" : "order", "args" : { "category" : "buy", "amount" : 100000000 }}'
-      Gekko::Command.parse(cmd).should be_an_instance_of Gekko::Command
+      enable_logger do
+        EM.run do
+          Gekko::Command.build(cmd, @connection).should be_kind_of Gekko::Command
+          EM.stop
+        end
+      end
     end
 
     it 'should fail to parse invalid JSON' do
-      expect { Gekko::Command.parse('foo') }.to raise_error
-    end
-  end
-
-  describe '#new' do
-    it 'should create a command' do
-      data = { "command" => "order", "args" => { "category" => "buy", "amount" => 100000000 }}
-      Gekko::Command.new(data).should be_an_instance_of Gekko::Command
-    end
-
-    it 'should fail to instantiate invalid command' do
-      data = { "command" => "invalid" }
-      expect { Gekko::Command.new(data) }.to raise_error
+      expect { Gekko::Command.build('foo', @connection) }.to raise_error
     end
   end
 end
