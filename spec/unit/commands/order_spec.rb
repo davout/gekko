@@ -17,6 +17,9 @@ describe 'Gekko::Commands::Order' do
     end
 
     it 'should push the order on a redis queue' do
+      deferrable = mock(Object)
+      deferrable.should_receive(:callback).and_yield
+      @redis.should_receive(:set).once.with(@c.order.id, @c.order.to_json).and_return(deferrable)
       @redis.should_receive(:push_tail).once.with('btceur:orders', @c.order.id)
       @c.execute
     end
