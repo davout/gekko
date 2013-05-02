@@ -13,7 +13,7 @@ module Gekko
 
     include Gekko::Logger
 
-    attr_accessor :pid, :pairs, :ip, :port, :connections
+    attr_accessor :pid, :pairs, :ip, :port, :connections, :redis
 
     def initialize(ip = '0.0.0.0', port = 6943, pairs = Gekko::DEFAULT_PAIRS)
       unless EventMachine.reactor_running?
@@ -30,6 +30,7 @@ module Gekko
       logger.info("Starting network listener on #{ip}:#{port}")
 
       register_signal_handlers
+      connect_redis
       fork_matchers
       start_network_listener
       start_informations_tick
@@ -47,7 +48,8 @@ module Gekko
         connections << c
         c.server    = self
         c.logger    = logger 
-        
+        c.redis     = redis
+
         c.log_connection
       end
     end
@@ -70,6 +72,11 @@ module Gekko
       Process.waitall
 
       EventMachine.stop
+    end
+
+    def connect_redis
+      EventMachine::Hiredis.logger = logger
+      self.redis = EventMachine::Hiredis.connect
     end
 
     def start_informations_tick

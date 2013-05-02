@@ -22,23 +22,13 @@ module Gekko
 
       logger.info("Received data for [#{@connection_id}] : #{d}")
 
-      if d == "quit"
-        logger.info("Closing connection [#{connection_id}] on client request.")
+      begin
+        cmd = Gekko::Command.build(data, self)
+        cmd.execute
+      rescue
+        logger.error("Received invalid message for connection [#{connection_id}] : \"#{$!.message}\", disconnecting.")
+        send_data("Invalid message.\n")
         close_connection_after_writing
-
-      else
-        begin
-          cmd = Gekko::Command.parse(data)
-          
-          if cmd.type == :order
-            redis.push("orders:#{cmd.args['pair']}", cmd.args.to_json)
-          end
-
-        rescue
-          logger.error("Received invalid message for connection [#{connection_id}], disconnecting.")
-          send_data("Invalid message.\n")
-          close_connection_after_writing
-        end
       end
     end
 

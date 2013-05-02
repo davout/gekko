@@ -12,17 +12,13 @@ describe 'Gekko::Command' do
 
   describe '.parse' do
     it 'should parse a command' do
-      cmd = '{ "command" : "order", "args" : { "category" : "buy", "amount" : 100000000 }}'
-      enable_logger do
-        EM.run do
-          Gekko::Command.build(cmd, @connection).should be_kind_of Gekko::Command
-          EM.stop
-        end
-      end
+      cmd = '{ "command" : "order", "args" : { "type" : "buy", "amount" : 100000000, "pair" : "BTCXRP" }}'
+      Gekko::Command.build(cmd, @connection).should be_kind_of Gekko::Command
     end
 
     it 'should fail to parse invalid JSON' do
       expect { Gekko::Command.build('foo', @connection) }.to raise_error
     end
   end
+
 end

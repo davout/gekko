@@ -3,21 +3,15 @@ require 'oj'
 module Gekko
   class Command
 
-    COMMANDS = [:order, :admin, :subscribe]
-
     def self.build(cmd, connection)
-      begin
-        parsed = Oj.load(cmd)
-        command = class_for_command(parsed['command']).new(parsed, connection)
-        command
-      rescue
-        connection.logger.error("Could not build command from data #{cmd}")
-        raise "Couldn't parse command"
-      end
+      parsed  = Oj.load(cmd)
+      command = class_for_command(parsed['command']).new(parsed['args'], connection)
+      command
     end
 
     def initialize(data, connection)
-      @args = data['args'] 
+      @args       = data
+      @connection = connection
     end
 
     def self.class_for_command(command)
