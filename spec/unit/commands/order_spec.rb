@@ -17,7 +17,7 @@ describe 'Gekko::Commands::Order' do
     end
 
     it 'should render the command as JSON' do  
-      Oj.load(@c.to_json).should eql(Oj.load('{"amount":100000000,"type":"buy","price":null}'))
+      Oj.load(@c.to_json).should eql(Oj.load('{"pair":"BTCEUR", "amount":100000000, "price":null, "type":"buy"}'))
     end
   end
 
@@ -28,7 +28,7 @@ describe 'Gekko::Commands::Order' do
     end
 
     it 'should push the order on a redis queue' do
-      @redis.should_receive(:push_tail).once.with('btceur:orders', '{"amount":100000000,"price":null,"type":"buy"}')
+      @redis.should_receive(:push_tail).once.with('btceur:orders', '{"pair":"BTCEUR","amount":100000000,"price":null,"type":"buy"}')
       @c.execute
     end
   end

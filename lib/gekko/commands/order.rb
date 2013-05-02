@@ -7,14 +7,14 @@ module Gekko
       attr_accessor :order
 
       def initialize(*args)
-        puts args[0].class
+        #puts args[0].class
         self.order = Gekko::Models::Order.new(args[0]['pair'], args[0]['type'], args[0]['amount'], args[0]['price'])
         super(*args)
       end
 
       def execute
-        @connection.redis.push_tail "#{@pair.downcase}:orders", to_json
-        @connection.logger.info("Pushed order into #{@pair.upcase} queue : #{to_json}")
+        @connection.redis.push_tail "#{@order.pair.downcase}:orders", to_json
+        @connection.logger.info("Pushed order into #{@order.pair.upcase} queue : #{to_json}")
       end
 
       def to_json
