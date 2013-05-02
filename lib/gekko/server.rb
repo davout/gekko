@@ -12,28 +12,50 @@ module Gekko
 
     include Gekko::Logger
 
+    attr_accessor :pid, :pairs, :ip, :port, :connections
+
     def initialize(ip = '0.0.0.0', port = 6943, pairs = Gekko::DEFAULT_PAIRS)
       unless EventMachine.reactor_running?
         raise 'The server must be started inside a running reactor, create it inside a EventMachine.run { } block'
       end
 
-      logger.info("Starting Gekko v#{Gekko::VERSION} with PID #{Process.pid}") 
+      self.pid         = Process.pid
+      self.pairs       = pairs
+      self.ip          = ip
+      self.port        = port
+      self.connections = []
 
-      Signal.trap('INT')  { shutdown }
-      Signal.trap('TERM') { shutdown }
+      logger.info("Starting Gekko v#{Gekko::VERSION} with PID #{pid}") 
+      logger.info("Starting network listener on #{ip}:#{port}")
 
+      register_signal_handlers
+      fork_matchers
+      start_network_listener
+      start_informations_tick
+    end
+
+    def fork_matchers
       @matching_processes = []
-
       pairs.each do |pair|
         @matching_processes << fork { Gekko::Matcher.new(pair) }
       end
+    end
 
-      logger.info("Starting network listener on #{ip}:#{port}")
-
+    def start_network_listener
       @network_listener = EventMachine.start_server(ip, port, Gekko::Connection) do |c| 
-        c.logger = logger 
-        #c.redis  = redis
+        connections << c
+        c.server    = self
+        c.logger    = logger 
+        
         c.log_connection
+      end
+    end
+
+    def register_signal_handlers
+      Signal.trap(:INT)  { @shutting_down = true }
+      Signal.trap(:TERM) { @shutting_down = true }
+      EventMachine.add_periodic_timer(0.5) do
+        shutdown if @shutting_down
       end
     end
 
@@ -48,6 +70,11 @@ module Gekko
 
       EventMachine.stop
     end
+
+    def start_informations_tick
+      EventMachine.add_periodic_timer(60) do
+        logger.info("#{connections.count} clients currently connected.")
+      end
+    end
   end
 end
-

@@ -4,7 +4,7 @@ require 'oj'
 module Gekko
   class Connection < EventMachine::Connection
 
-    attr_accessor :logger, :redis, :connection_id
+    attr_accessor :logger, :server, :redis, :connection_id
 
     @connection_id = nil
 
@@ -35,6 +35,10 @@ module Gekko
           close_connection_after_writing
         end
       end
+    end
+
+    def unbind
+      server.connections.delete(self)
     end
   end
 end

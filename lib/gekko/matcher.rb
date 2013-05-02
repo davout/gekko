@@ -9,17 +9,16 @@ module Gekko
 
     def initialize(pair)
       logger.info("Starting matcher for #{pair} pair with PID #{Process.pid}")
-      @pair = pair
-      match
+      self.pair = pair
+      match!
     end
 
-    def match
+    def match!
       terminated = false
 
       Signal.trap('TERM') do
         terminated = true
         logger.warn("Shutting down #{pair} matcher")
-        puts("ouch")
       end
 
       while !terminated do
@@ -27,7 +26,6 @@ module Gekko
       end
 
       logger.warn("#{pair} matcher terminated.")
-      puts "argh"
     end
   end
 end

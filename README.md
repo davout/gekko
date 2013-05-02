@@ -20,5 +20,6 @@ The following things are on the roadmap :
 * Advanced orders (stops, trailing stops, discretionary, multi-legged etc.)
 * FIX interface
 * Websocket interface
+* Flexible fee calculation scheme
 * ...
 
