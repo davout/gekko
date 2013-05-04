@@ -7,6 +7,7 @@ describe 'Gekko::Commands::Order' do
     logger = mock(Logger).as_null_object
     @connection = mock(Gekko::Connection)
     @connection.stub(:logger).and_return(logger)
+    @connection.stub(:account).and_return('5318BF75-683C-4F74-9C8E-E5FA9B154B28')
     @c = Gekko::Command.build(cmd, @connection)
   end
 

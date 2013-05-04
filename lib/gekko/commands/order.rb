@@ -6,9 +6,9 @@ module Gekko
 
       attr_accessor :order
 
-      def initialize(*args)
-        self.order = Gekko::Models::Order.new(args[0]['pair'], args[0]['type'], args[0]['amount'], args[0]['price'])
-        super(*args)
+      def initialize(data, connection)
+        self.order = Gekko::Models::Order.new(data['pair'], data['type'], data['amount'], data['price'], connection.account)
+        super(data, connection)
       end
 
       def execute

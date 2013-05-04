@@ -18,6 +18,8 @@ module Gekko
       case command
       when 'order' then
         Gekko::Commands::Order
+      when 'authenticate' then
+        Gekko::Commands::Authenticate
       else
         raise "Invalid command type"
       end

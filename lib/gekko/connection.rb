@@ -5,6 +5,7 @@ module Gekko
   class Connection < EventMachine::Connection
 
     attr_accessor :logger, :server, :redis, :connection_id
+    attr_reader :account
 
     @connection_id = nil
 
@@ -34,6 +35,11 @@ module Gekko
 
     def unbind
       server.connections.delete(self)
+    end
+
+    def account=(uuid)
+      raise 'Invalid account ID, must be an UUID' unless uuid =~ /\A[\da-f]{8}-([\da-f]{4}-){3}[\da-f]{12}\z/i
+      @account = uuid.downcase
     end
   end
 end
