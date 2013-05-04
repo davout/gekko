@@ -8,8 +8,9 @@ module Gekko
       end
 
       def execute 
-        @connection.logger.info("Authenticated account #{@account}")
         @connection.account = @account
+        @connection.logger.info("Authenticated account #{@connection.account}")
+        yield({ "info" => "Authenticated as #{@connection.account}"}) if block_given?
       end
 
     end

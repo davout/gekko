@@ -13,10 +13,11 @@ module Gekko
 
       def execute
         @connection.redis.set(@order.id, @order.to_json).callback do
-          @connection.redis.push_tail "#{@order.pair.downcase}:orders", @order.id
+          @connection.redis.lpush("#{@order.pair.downcase}:orders", @order.id).callback do
+            @connection.logger.info("Pushed order into #{@order.pair.upcase} queue : #{@order.to_json}")
+            yield(@order) if block_given?
+          end
         end
-
-        @connection.logger.info("Pushed order into #{@order.pair.upcase} queue : #{@order.to_json}")
       end
 
     end
