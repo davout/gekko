@@ -23,7 +23,7 @@ describe 'Gekko::Connection' do
     end
 
     it 'should build a command from received data' do
-      Gekko::Command.should_receive(:build).with(@received_data, @connection).and_call_original
+      Gekko::Command.should_receive(:build).with(Oj.load(@received_data), @connection).and_call_original
       Gekko::Commands::Order.any_instance.should_receive(:execute)
       @connection.receive_data(@received_data)
     end

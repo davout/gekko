@@ -19,14 +19,13 @@ module Gekko
     end
 
     def receive_data(data)
-      d = data.chomp
-
-      logger.info("Received data for [#{@connection_id}] : #{d}")
-
       begin
-        cmd = Gekko::Command.build(data, self)
+        logger.info("Received data for [#{@connection_id}] : #{data}")
+        parsed = Oj.load(data.chomp)
+        cmd = Gekko::Command.build(parsed, self)
         cmd.execute
       rescue
+        puts $!.message
         logger.error("Received invalid message for connection [#{connection_id}] : \"#{$!.message}\", disconnecting.")
         send_data("Invalid message.\n")
         close_connection_after_writing

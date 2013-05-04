@@ -2,8 +2,9 @@ module Gekko
   module Commands
     class Authenticate < ::Gekko::Command
 
-      def initialize(*args)
-        super(*args)
+      def initialize(data, connection)
+        @account = data['account']
+        super
       end
 
       def execute 

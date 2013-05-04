@@ -3,7 +3,7 @@ require_relative '../../spec_helper'
 describe 'Gekko::Commands::Order' do
 
   before(:each) do
-    cmd = '{ "command" : "order", "args" : { "category" : "buy", "amount" : 100000000, "pair" : "BTCEUR", "type" : "buy" }}'
+    cmd = { "command" => "order", "args" => { "category" => "buy", "amount" => 100000000, "pair" => "BTCEUR", "type" => "buy" }}
     logger = mock(Logger).as_null_object
     @connection = mock(Gekko::Connection)
     @connection.stub(:logger).and_return(logger)

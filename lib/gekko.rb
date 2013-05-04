@@ -1,4 +1,5 @@
 require 'gekko/server'
 require 'gekko/command'
+require 'gekko/commands/authenticate'
 require 'gekko/commands/order'
 require 'gekko/models/order'

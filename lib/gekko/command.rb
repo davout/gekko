@@ -4,8 +4,7 @@ module Gekko
   class Command
 
     def self.build(cmd, connection)
-      parsed  = Oj.load(cmd)
-      command = class_for_command(parsed['command']).new(parsed['args'], connection)
+      command = class_for_command(cmd['command']).new(cmd['args'], connection)
       command
     end
 

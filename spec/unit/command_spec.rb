@@ -13,7 +13,7 @@ describe 'Gekko::Command' do
 
   describe '.parse' do
     it 'should parse a command' do
-      cmd = '{ "command" : "order", "args" : { "type" : "buy", "amount" : 100000000, "pair" : "BTCXRP" }}'
+      cmd = { "command" => "order", "args" => { "type" => "buy", "amount" => 100000000, "pair" => "BTCXRP" }}
       Gekko::Command.build(cmd, @connection).should be_kind_of Gekko::Command
     end
 
