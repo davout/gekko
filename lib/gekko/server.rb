@@ -3,7 +3,6 @@ require 'em-hiredis'
 
 require 'gekko/connection'
 require 'gekko/command'
-require 'gekko/default_pairs'
 require 'gekko/logger'
 require 'gekko/matcher'
 require 'gekko/version'
@@ -13,9 +12,9 @@ module Gekko
 
     include Gekko::Logger
 
-    attr_accessor :pid, :pairs, :ip, :port, :connections, :redis
+    attr_accessor :pid, :pairs, :ip, :port, :connections, :redis, :network_listener
 
-    def initialize(ip = '0.0.0.0', port = 6943, pairs = Gekko::DEFAULT_PAIRS)
+    def initialize(ip, port, pairs, redis)
       unless EventMachine.reactor_running?
         raise 'The server must be started inside a running reactor, create it inside a EventMachine.run { } block'
       end
@@ -25,22 +24,13 @@ module Gekko
       self.ip          = ip
       self.port        = port
       self.connections = []
+      self.redis       = connect_redis(redis)
 
       logger.info("Starting Gekko v#{Gekko::VERSION} with PID #{pid}") 
       logger.info("Starting network listener on #{ip}:#{port}")
 
-      register_signal_handlers
-      connect_redis
-      fork_matchers
       start_network_listener
       start_informations_tick
-    end
-
-    def fork_matchers
-      @matching_processes = []
-      pairs.each do |pair|
-        @matching_processes << fork { Gekko::Matcher.new(pair) }
-      end
     end
 
     def start_network_listener
@@ -54,29 +44,10 @@ module Gekko
       end
     end
 
-    def register_signal_handlers
-      Signal.trap(:INT)  { @shutting_down = true }
-      Signal.trap(:TERM) { @shutting_down = true }
-      EventMachine.add_periodic_timer(0.5) do
-        shutdown if @shutting_down
-      end
-    end
-
-    def shutdown
-      logger.warn('Shutting down.')
-      logger.warn('Terminating network listener')
-      EventMachine.stop_server(@network_listener)
-
-      logger.warn('Killing matchers...')
-      @matching_processes.each { |p| Process.kill('TERM', p) }
-      Process.waitall
-
-      EventMachine.stop
-    end
-
-    def connect_redis
+    def connect_redis(redis)
       EventMachine::Hiredis.logger = logger
-      self.redis = EventMachine::Hiredis.connect
+      conn_string = "redis://#{redis[:host]}:#{redis[:port]}/#{redis[:database]}"
+      self.redis = EventMachine::Hiredis.connect(conn_string)
     end
 
     def start_informations_tick

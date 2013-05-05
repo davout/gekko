@@ -7,6 +7,10 @@ RSpec.configure do |config|
     end
   end
 
+  config.before(:each) do
+    Redis.connect(Gekko::DEFAULT_REDIS).flushdb
+  end
+
   def silence_logger
     begin
       Gekko::Logger.logging_enabled = false

@@ -1,8 +1,4 @@
 #!/usr/bin/env ruby
-
 require 'gekko'
-
-EventMachine.run do
-  Gekko::Server.new
-end
+Gekko.start!
 

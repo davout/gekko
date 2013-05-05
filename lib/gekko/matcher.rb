@@ -6,29 +6,33 @@ require 'redis'
 module Gekko
   class Matcher
 
+    BRPOP_TIMEOUT = 0.05
+
     include Gekko::SynchronousLogger
 
     attr_accessor :pair, :redis, :terminated
 
-    def initialize(pair)
+    def initialize(pair, redis)
       logger.info("Starting matcher for #{pair} pair with PID #{Process.pid}")
-      
-      self.pair = pair
-      
-      connect_redis
-    end
-
-    def match!
-      
-      self.terminated = false
+      self.pair  = pair
+      self.redis = connect_redis(redis)
 
       Signal.trap('TERM') do
         self.terminated = true
         logger.warn("Shutting down #{pair} matcher")
       end
+    end
+
+    def match!
+
+      self.terminated = false
+
+      queue = "#{@pair.downcase}:orders"
 
       while !terminated do
-        order = Gekko::Models::Order.parse(redis.blpop("#{@pair.downcase}:orders"))
+        order = Gekko::Models::Order.find(redis.brpop(queue, BRPOP_TIMEOUT))
+        logger.info("Popped order from the #{@pair} queue : #{order.to_json}")
+        puts 'POP!'
         execute_order(order)
       end
 
@@ -36,8 +40,8 @@ module Gekko
 
     end
 
-    def connect_redis
-      self.redis = Redis.connect
+    def connect_redis(redis)
+      self.redis = Redis.connect(redis)
     end
 
     def execute_order(order)
@@ -48,6 +52,17 @@ module Gekko
       logger.info("Posted order #{order.to_json} to the #{@pair} book.")
 
     end
+
+    def self.fork!(pairs, redis)
+      @matching_processes = []
+
+      pairs.each do |pair|
+        @matching_processes << fork { new(pair, redis).match! }
+      end
+
+      @matching_processes
+    end
+
   end
 end
 
