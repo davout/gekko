@@ -46,7 +46,7 @@ module Gekko
 
     def connect_redis(redis)
       EventMachine::Hiredis.logger = logger
-      conn_string = "redis://#{redis[:host]}:#{redis[:port]}/#{redis[:database]}"
+      conn_string = "redis://#{redis[:host]}:#{redis[:port]}/#{redis[:db]}"
       self.redis = EventMachine::Hiredis.connect(conn_string)
     end
 

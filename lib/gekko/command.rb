@@ -19,6 +19,8 @@ module Gekko
         Gekko::Commands::Order
       when 'authenticate' then
         Gekko::Commands::Authenticate
+      when 'ticker' then
+        Gekko::Commands::Ticker
       else
         raise "Invalid command type"
       end

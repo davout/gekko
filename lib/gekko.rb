@@ -2,7 +2,9 @@ require 'gekko/server'
 require 'gekko/command'
 require 'gekko/commands/authenticate'
 require 'gekko/commands/order'
+require 'gekko/commands/ticker'
 require 'gekko/models/order'
+require 'gekko/models/ticker'
 
 module Gekko
 
@@ -10,7 +12,7 @@ module Gekko
   DEFAULT_PAIRS = [ 'BTCLTC', 'BTCXRP' ]
 
   # Default Redis DB to connect to
-  DEFAULT_REDIS = { host: '0.0.0.0', database: 15, port: 6379 }
+  DEFAULT_REDIS = { host: '0.0.0.0', db: 15, port: 6379 }
 
   extend Gekko::Logger
 

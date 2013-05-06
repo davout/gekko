@@ -35,6 +35,22 @@ module Gekko
         })
       end
 
+      def next_matching(redis)
+        n = redis.zrange("#{@pair.downcase}:book:#{type == 'buy' ? 'sell' : 'buy'}", 0, 0)
+        n = n.empty? ? nil : Gekko::Models::Order.parse(n[0])
+
+        # Return matching order if prices match
+        (n.type == 'buy' ? (n.price >= price) : (n.price <= price)) && n
+      end
+
+      def self.find(order_id, redis)
+        from_json(redis.get(order_id))
+      end
+
+      def self.from_json(str)
+        o = Oj.load(str)
+        new(o['pair'], o['type'], o['amount'], o['price'], o['account'])
+      end
     end
   end
 end
