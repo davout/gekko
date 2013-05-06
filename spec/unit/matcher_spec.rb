@@ -29,10 +29,11 @@ describe 'Gekko::Matcher' do
 
   describe '#execute_order' do
     before do
-      @bid     = Gekko::Models::Order.new('BTCXRP', 'buy',  100, 100, '01647f52-152b-43ea-a38e-d559eb3a5779')
-      @ask     = Gekko::Models::Order.new('BTCXRP', 'sell', 100, 100, '01647f52-152b-43ea-a38e-d559eb3a5779')
+      @bid     = Gekko::Models::Order.new('BTCXRP', 'buy',  10000000, 10000000, '01647f52-152b-43ea-a38e-d559eb3a5779')
+      @ask     = Gekko::Models::Order.new('BTCXRP', 'sell', 10000000, 10000000, '01647f52-152b-43ea-a38e-d559eb3a5779')
 
-      Redis.stub(:connect).and_return(mock(Object).as_null_object)
+      @redis = mock(Object).as_null_object
+      Redis.stub(:connect).and_return(@redis)
 
       @matcher = Gekko::Matcher.new('BTCXRP', nil)
     end
@@ -51,6 +52,26 @@ describe 'Gekko::Matcher' do
       @matcher.execute_order(@ask)
     end
 
+    it 'should execute a bid against an ask' do
+      account = UUID.generate
+
+      asks = [
+        Gekko::Models::Order.new('BTCXRP', 'sell', 10000000, 10000000, account),
+        nil
+      ]
+
+      @bid.should_receive(:next_matching).twice.and_return(*asks)
+      executions = @matcher.execute_order(@bid)
+
+      executions.should_be eql({
+        quoted_amount:  10000000,
+        base_amount:    10000000,
+        quoted_account: account,
+        base_account:   @bid.account,
+        base_fee:       498000,
+        quoted_fee:     498000
+      })
+    end
   end
 end
 

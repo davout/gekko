@@ -50,20 +50,27 @@ module Gekko
 
       executions = []
 
-      while n = order.next_matching
+      while n = order.next_matching(redis)
         trade_price = n.price
-        base_amount = [n.amount, amount].min
+        base_amount = [n.amount, order.amount].min
 
-        executions << {
-          price:       trade_price,
-          base_amount: base_amount,
-          quoted_amount: base_amount / trade_price # boo
+        execution = {
+          price:          trade_price,
+          base_amount:    base_amount,
+          quoted_amount:  base_amount / trade_price, # boo
+          base_account:   order.account,
+          quoted_account: n.account,
+          base_fees:      base_amount * Gekko::DEFAULT_FEE,
+          quoted_fees:    (base_amount / trade_price) * Gekko::DEFAULT_FEE,
         }
-      end
 
+        executions << execution
+      end
 
       # Post order to the book
       add_to_book(order)
+
+      executions
     end
 
     def add_to_book(order)  

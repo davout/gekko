@@ -14,6 +14,9 @@ module Gekko
   # Default Redis DB to connect to
   DEFAULT_REDIS = { host: '0.0.0.0', db: 15, port: 6379 }
 
+  # Default fee as percentage fee * 10^8
+  DEFAULT_FEE = 0.00798000
+
   extend Gekko::Logger
 
   # Forks matching processes and a networtk listener
