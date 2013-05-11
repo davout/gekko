@@ -38,21 +38,8 @@ describe 'Gekko::Matcher' do
       @matcher = Gekko::Matcher.new('BTCXRP', nil)
     end
 
-    it 'should add a bid to the book' do
-      @matcher.redis.should_receive(:zadd).once.with('btcxrp:book:buy', 0.01, @bid.id)
-      @matcher.redis.should_receive(:set).once.with(@bid.id, @bid.to_json)
-
-      @matcher.execute_order(@bid)
-    end
-
-    it 'should add an ask to the book' do
-      @matcher.redis.should_receive(:zadd).once.with('btcxrp:book:sell', 100, @ask.id)
-      @matcher.redis.should_receive(:set).once.with(@ask.id, @ask.to_json)
-
-      @matcher.execute_order(@ask)
-    end
-
     it 'should execute a bid against an ask' do
+
       account = UUID.generate
 
       asks = [
@@ -63,14 +50,15 @@ describe 'Gekko::Matcher' do
       @bid.should_receive(:next_matching).twice.and_return(*asks)
       executions = @matcher.execute_order(@bid)
 
-      executions.should_be eql({
-        quoted_amount:  10000000,
+      executions.should eql([{
+        price:          10000000,            
         base_amount:    10000000,
-        quoted_account: account,
-        base_account:   @bid.account,
-        base_fee:       498000,
-        quoted_fee:     498000
-      })
+#        quoted_account: account #,
+#        base_account:   @bid.account,
+#        base_fee:       79800,
+#        quoted_fee:     79800,
+        quoted_amount:  10000000
+      }])
     end
   end
 end
