@@ -57,17 +57,14 @@ module Gekko
         execution = {
           price:            trade_price,
           base_amount:      base_amount,
-          quoted_amount:    quoted_amount #,
-#          base_account:     order.account,
-#          quoted_account:   n.account,
-#          base_fee:         (base_amount * Gekko::DEFAULT_FEE).to_i,
-#          quoted_fee:       (quoted_amount * Gekko::DEFAULT_FEE).to_i
+          quoted_amount:    quoted_amount,
+          base_account:     order.account,
+          quoted_account:   n.account,
+          base_fee:         base_amount * Gekko::DEFAULT_FEE,
+          quoted_fee:       quoted_amount * Gekko::DEFAULT_FEE
         }
 
-        executions << execution.keys.inject({}) do |memo, k|
-          memo[k] = execution[k]
-          memo
-        end
+        executions << execution
       end
 
       # Post order to the book

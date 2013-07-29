@@ -8,6 +8,8 @@ require 'gekko/models/ticker'
 
 module Gekko
 
+  # TODO : Minimum order life
+
   # Default pairs for which a matching process should be spawned
   DEFAULT_PAIRS = [ 'BTCLTC', 'BTCXRP' ]
 
