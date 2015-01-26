@@ -1,6 +1,6 @@
 require 'gekko/order'
 require 'gekko/logger'
-require 'gekko/book_side'
+require 'gekko/book'
 
 module Gekko
 

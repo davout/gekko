@@ -1,16 +1,18 @@
+require 'gekko/book_side'
+
 module Gekko
   class Book
 
-    attr_accessor :base_currency, :quoted_currency
+    # TODO : Add tick size
+    # TODO : Add order size limits
+    # TODO : Add order state
 
-    def initialize(base_currency, quoted_currency)
-      self.base_currency    = base_currency
-      self.quoted_currency  = quoted_currency
+    attr_accessor :pair, :bids, :asks
 
-      @sides = {
-        bid: BookSide.new,
-        ask: BookSide.new
-      }
+    def initialize(pair)
+      self.pair = pair
+      self.bids = BookSide.new(:bid)
+      self.asks = BookSide.new(:ask)
     end
 
     def receive_order(order)
@@ -21,14 +23,12 @@ module Gekko
         base_amount   = [n.amount, order.amount].min
         quoted_amount = base_amount / trade_price
 
+        # Add taker & maker IDs
         execution = {
           price:            trade_price,
           base_amount:      base_amount,
           quoted_amount:    quoted_amount,
-          base_account:     order.account,
-          quoted_account:   n.account,
           base_fee:         base_amount
-          quoted_fee:       quoted_amount
         }
 
         executions << execution
@@ -40,15 +40,15 @@ module Gekko
     end
 
     def ask
-      @sides[:ask].top
+      asks.top
     end
 
     def bid
-      @sides[:bid].top
+      bids.top
     end
 
     def spread
-      ask - bid
+      ask && bid && (ask - bid)
     end
 
   end

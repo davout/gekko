@@ -1,3 +1,5 @@
+require 'uuid'
+
 module Gekko
   class Order
 
@@ -10,9 +12,9 @@ module Gekko
       @expiration = expiration
       @created_at = created_at
 
+      raise 'Orders must have an UUID'                        unless @id && @id.is_a?(UUID)
       raise 'Price must be a positive integer or be omitted'  if (@price && (!@price.is_a?(Fixnum) || (@price <= 0)))
       raise 'Amount must be a non-zero integer'               if (@amount && (!@amount.is_a?(Fixnum) || @amount.zero?))
-      raise 'Orders must have an ID'                          unless @id
       raise 'Expiration must be omitted or be an integer'     unless (@expiration.nil? || (@expiration.is_a?(Fixnum) && @expiration > 0))
       raise 'The order creation timestamp can''t be nil'      if !@created_at
     end

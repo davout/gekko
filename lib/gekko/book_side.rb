@@ -3,6 +3,8 @@ module Gekko
 
     attr_accessor :side
 
+    # TODO : Fuck side, use a sign
+
     def initialize(side)
       if [:bid, :ask].include?(side)
         self.side = side
@@ -12,7 +14,7 @@ module Gekko
     end
 
     def top
-      (first && first.price) || 0
+      first && first.price
     end
 
     def cumulated_depth_at(price)
