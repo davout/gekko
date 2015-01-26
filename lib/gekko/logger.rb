@@ -1,5 +1,4 @@
 require 'logger'
-require 'em-logger'
 
 module Gekko
   module Logger
@@ -8,7 +7,7 @@ module Gekko
 
     def logger   
       output = Gekko::Logger.logging_enabled ? STDOUT : '/dev/null'
-      @logger ||= EventMachine::Logger.new(::Logger.new(output))
+      @logger ||= Logger.new(output)
     end
 
     def self.logging_enabled
