@@ -12,7 +12,8 @@ module Gekko
       @expiration = expiration
       @created_at = created_at
 
-      raise 'Orders must have an UUID'                        unless @id && @id.is_a?(UUID)
+      # TODO Proper UUIDs
+      raise 'Orders must have an UUID'                        unless @id 
       raise 'Price must be a positive integer or be omitted'  if (@price && (!@price.is_a?(Fixnum) || (@price <= 0)))
       raise 'Amount must be a non-zero integer'               if (@amount && (!@amount.is_a?(Fixnum) || @amount.zero?))
       raise 'Expiration must be omitted or be an integer'     unless (@expiration.nil? || (@expiration.is_a?(Fixnum) && @expiration > 0))
@@ -36,6 +37,10 @@ module Gekko
 
     def self.find(id)
       # Do we need this?
+    end
+
+    def filled?
+      amount.zero?
     end
 
   end
