@@ -13,6 +13,15 @@ module Gekko
       end
     end
 
+    def insert_order(order)
+      idx = find_index do |ord|
+        (order.bid? && (ord.price < order.price)) ||
+          (order.ask? && (ord.price > order.price))
+      end
+
+      insert((idx || -1), order)
+    end
+
     def top
       first && first.price
     end

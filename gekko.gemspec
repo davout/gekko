@@ -17,7 +17,7 @@ Gem::Specification.new do |s|
 
   s.required_rubygems_version = '>= 1.3.6'
 
-  s.add_dependency 'uuid'
+  s.add_dependency 'uuidtools'
 
   s.add_development_dependency 'rspec'
 

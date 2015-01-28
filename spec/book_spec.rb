@@ -30,7 +30,4 @@ describe Gekko::Book do
     end
   end
 
-  describe '#add_order' do
-  end
-
 end
