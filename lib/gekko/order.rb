@@ -18,21 +18,6 @@ module Gekko
       raise 'The order creation timestamp can''t be nil'      if !@created_at
     end
 
-    def to_json
-      Oj.dump({
-        'id'          => @id,
-        'amount'      => @amount,
-        'price'       => @price,
-        'created_at'  => @created_at,
-        'expiration'  => @expiration
-      })
-    end
-
-    def self.from_json(str)
-      o = Oj.load(str)
-      new(o['id'], o['amount'], o['price'], o['created_at'], o['expiration']) 
-    end
-
     def self.find(id)
       # Do we need this?
     end

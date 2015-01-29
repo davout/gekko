@@ -1,4 +1,5 @@
 require 'gekko/book_side'
+require 'gekko/tape'
 
 module Gekko
   class Book
@@ -8,19 +9,22 @@ module Gekko
     # TODO : Add order state
     # TODO : Add order expiration
 
-    attr_accessor :pair, :bids, :asks
+    attr_accessor :pair, :bids, :asks, :tape
 
-    def initialize(pair)
+    def initialize(pair, opts = {})
       self.pair = pair
-      self.bids = BookSide.new(:bid)
-      self.asks = BookSide.new(:ask)
-
-      @sequence = 1
+      self.bids = BookSide.new(:bids)
+      self.asks = BookSide.new(:asks)
+      self.tape = Tape.new(opts[:logger])
     end
 
-    def add_order(order)
+    #
+    # Receives an order and executes it 
+    #
+    # @param order [Order] The order to execute
+    #
+    def receive_order(order)
 
-      results       = []
       order_side    = order.bid? ? bids : asks
       opposite_side = order.bid? ? asks : bids
       next_match    = opposite_side.first
@@ -32,13 +36,14 @@ module Gekko
         # TODO : What about the rounding?
         quoted_amount = base_amount / trade_price
 
-        results << {
+        tape << {
           type:             :execution,
           price:            trade_price,
           base_amount:      base_amount,
           quoted_amount:    quoted_amount,
           maker_order_id:   next_match.id,
           taker_order_id:   order.id,
+          time:             Time.now.to_f,
           tick:             order.bid? ? :up : :down
         }
 
@@ -46,39 +51,42 @@ module Gekko
         next_match.remaining_amount -= base_amount
 
         if next_match.remaining_amount.filled?
-          opposite_side.shift
-          results << next_matching.message(:done, reason: :filled)
+          tape << opposite_side.shift.message(:done, reason: :filled)
         end
       end
 
       if order.filled?
-        results << order.message(:done, reason: :filled)
+        tape << order.message(:done, reason: :filled)
       elsif order.fill_or_kill?
-        results << order.message(:done, reason: :killed)
+        tape << order.message(:done, reason: :killed)
       else
         order_side.insert_order(order)
-        results << order.message(:open)
+        tape << order.message(:open)
       end
-
-      results.each { |r| inject_sequence(r) }
-      results
     end
 
+    #
+    # Returns the current best ask price or +nil+ if there
+    # are currently no asks
+    #
     def ask
       asks.top
     end
 
+    #
+    # Returns the current best bid price or +nil+ if there
+    # are currently no bids
+    #
     def bid
       bids.top
     end
 
+    #
+    # Returns the current spread if at least a bid and an ask
+    # are present, returns +nil+ otherwise
+    #
     def spread
       ask && bid && (ask - bid)
-    end
-
-    def inject_sequence(h)
-      h[:sequence] = @sequence
-      @sequence += 1
     end
 
   end

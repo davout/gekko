@@ -12,8 +12,8 @@ describe Gekko::Book do
     end
 
     it 'should return the price of the best bid' do
-      @book.add_order(Gekko::Order.new(random_id, 1, 1, Time.now.to_i))
-      @book.add_order(Gekko::Order.new(random_id, 1, 2, Time.now.to_i))
+      @book.receive_order(Gekko::Order.new(random_id, 1, 1, Time.now.to_i))
+      @book.receive_order(Gekko::Order.new(random_id, 1, 2, Time.now.to_i))
       expect(@book.bid).to eql(2)
     end
   end
@@ -24,8 +24,8 @@ describe Gekko::Book do
     end
 
     it 'should return the price of the best bid' do
-      @book.add_order(Gekko::Order.new(random_id, -1, 1, Time.now.to_i))
-      @book.add_order(Gekko::Order.new(random_id, -1, 2, Time.now.to_i))
+      @book.receive_order(Gekko::Order.new(random_id, -1, 1, Time.now.to_i))
+      @book.receive_order(Gekko::Order.new(random_id, -1, 2, Time.now.to_i))
       expect(@book.ask).to eql(1)
     end
   end
