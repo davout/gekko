@@ -1,0 +1,13 @@
+SPEC
+
+ - orders go in
+ - Held amounts are associated to orders
+ - executions against existing orders go out
+ - Un-holds go out
+ - book entries go out
+ - book entries are updated, and go out
+ - book entries are nuked
+ - orders can be canceled
+ - orders expire if necessary
+ - matches orders
+ - Self-trade reduces orders
