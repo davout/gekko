@@ -32,10 +32,8 @@ module Gekko
         # TODO : What about the rounding?
         quoted_amount = base_amount / trade_price
 
-        # Add taker & maker IDs
         results << {
           type:             :execution,
-          sequence:         incremented_sequence,
           price:            trade_price,
           base_amount:      base_amount,
           quoted_amount:    quoted_amount,
