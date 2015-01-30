@@ -23,6 +23,7 @@ Gem::Specification.new do |s|
   s.add_development_dependency 'rspec',     '~> 0'
   s.add_development_dependency 'simplecov', '~> 0'
   s.add_development_dependency 'pry',       '~> 0'
+  s.add_development_dependency 'rake',      '~> 0'
 
   s.files = Dir.glob('lib/**/*') + %w(LICENSE README.md)
 
