@@ -1,4 +1,4 @@
-Gekko
+Gekko [![Build Status](https://secure.travis-ci.org/Paymium/gekko.png?branch=master)](http://travis-ci.org/Paymium/gekko) [![Coverage Status](https://img.shields.io/coveralls/Paymium/gekko.svg)](https://coveralls.io/r/Paymium/gekko?branch=master) [![Gem Version](https://badge.fury.io/rb/gekko.svg)](http://badge.fury.io/rb/gekko)
 =
 
 ## What Gekko is
