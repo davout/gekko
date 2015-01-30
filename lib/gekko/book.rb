@@ -1,5 +1,6 @@
 require 'gekko/book_side'
 require 'gekko/tape'
+require 'gekko/errors'
 
 module Gekko
 
@@ -8,18 +9,23 @@ module Gekko
   #
   class Book
 
-    # TODO: Add tick size
     # TODO: Add order size limits
     # TODO: Add order expiration
     # TODO: Test for rounding issues
 
-    attr_accessor :pair, :bids, :asks, :tape
+    # The default minimum price increment accepted for placed orders
+    DEFAULT_TICK_SIZE = 1000
+
+    attr_accessor :pair, :bids, :asks, :tape, :tick_size
 
     def initialize(pair, opts = {})
-      self.pair = pair
-      self.bids = BookSide.new(:bid)
-      self.asks = BookSide.new(:ask)
-      self.tape = Tape.new(opts[:logger])
+      self.pair       = pair
+      self.bids       = BookSide.new(:bid)
+      self.asks       = BookSide.new(:ask)
+      self.tape       = Tape.new(opts[:logger])
+
+      self.tick_size  = opts[:tick_size] || DEFAULT_TICK_SIZE
+      raise "Tick size must be a positive integer if provided" if tick_size && (!tick_size.is_a?(Fixnum) || tick_size <= 0)
     end
 
     #
@@ -28,6 +34,8 @@ module Gekko
     # @param order [Order] The order to execute
     #
     def receive_order(order)
+
+      raise Gekko::TickSizeMismatch unless (order.price % tick_size).zero?
 
       order_side    = order.bid? ? bids : asks
       opposite_side = order.bid? ? asks : bids

@@ -12,9 +12,9 @@ describe Gekko::Book do
     end
 
     it 'should return the price of the best bid' do
-      @book.receive_order(Gekko::Order.new(:bid, random_id, 1, 1))
-      @book.receive_order(Gekko::Order.new(:bid, random_id, 1, 2))
-      expect(@book.bid).to eql(2)
+      @book.receive_order(Gekko::Order.new(:bid, random_id, 1, 1000))
+      @book.receive_order(Gekko::Order.new(:bid, random_id, 1, 2000))
+      expect(@book.bid).to eql(2000)
     end
   end
 
@@ -24,9 +24,9 @@ describe Gekko::Book do
     end
 
     it 'should return the price of the best ask' do
-      @book.receive_order(Gekko::Order.new(:ask, random_id, 1, 1))
-      @book.receive_order(Gekko::Order.new(:ask, random_id, 1, 2))
-      expect(@book.ask).to eql(1)
+      @book.receive_order(Gekko::Order.new(:ask, random_id, 1, 1000))
+      @book.receive_order(Gekko::Order.new(:ask, random_id, 1, 2000))
+      expect(@book.ask).to eql(1000)
     end
   end
 
@@ -56,6 +56,12 @@ describe Gekko::Book do
       expect(@book.spread).to eq(30000)
       expect(@book.ask).to eq(60000)
       expect(@book.bid).to eq(30000)
+    end
+
+    it 'should refuse too precise prices' do
+      expect { @book.receive_order(Gekko::Order.new(:ask, random_id, 1000, @book.tick_size + 1)) }.to raise_error do |error|
+        expect(error).to be_a(Gekko::TickSizeMismatch)
+      end
     end
   end
 end
