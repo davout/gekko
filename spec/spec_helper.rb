@@ -10,3 +10,8 @@ def random_id
   UUID.random_create
 end
 
+def populate_book(book, orders)
+  orders[:bids].each { |b| book.receive_order(Gekko::Order.new(:bid, random_id, b[0], b[1])) }
+  orders[:asks].each { |b| book.receive_order(Gekko::Order.new(:ask, random_id, b[0], b[1])) }
+end
+

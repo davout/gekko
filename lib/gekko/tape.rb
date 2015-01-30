@@ -1,4 +1,8 @@
 module Gekko
+
+  #
+  # Records the trading engine messages sequentially
+  #
   class Tape
 
     attr_accessor :events, :logger
@@ -8,14 +12,15 @@ module Gekko
       @logger = logger
     end
 
-    def [](index)
-      events[index]
-    end
-
-    def <<(item)
-      item[:sequence] = events.length
-      logger && logger.info(item)
-      events << item
+    #
+    # Prints a message on the tape
+    #
+    # @param message [Hash] The message to record
+    #
+    def <<(message)
+      message[:sequence] = events.length
+      logger && logger.info(message)
+      events << message
     end
 
   end
