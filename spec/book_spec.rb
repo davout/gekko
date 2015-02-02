@@ -76,10 +76,11 @@ describe Gekko::Book do
       it 'should return the ticker' do
         @book.receive_order(Gekko::Order.new(:ask, random_id, 2500, 30000))
         expect(@book.ticker).to eql({
-          ask:    60000,
-          bid:    30000,
-          last:   30000,
-          spread: 30000
+          ask:        60000,
+          bid:        30000,
+          last:       30000,
+          spread:     30000,
+          volume_24h: 2500
         })
       end
     end

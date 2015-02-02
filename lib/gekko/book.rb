@@ -118,10 +118,11 @@ module Gekko
     #
     def ticker
       {
-        last:   tape.last_trade_price,
-        bid:    bid,
-        ask:    ask,
-        spread: spread
+        last:       tape.last_trade_price,
+        bid:        bid,
+        ask:        ask,
+        spread:     spread,
+        volume_24h: tape.volume_24h
       }
     end
 
