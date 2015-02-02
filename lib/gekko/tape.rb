@@ -8,10 +8,11 @@ module Gekko
     attr_accessor :logger, :last_trade_price
 
     def initialize(logger = nil)
-      @logger     = logger
-      @cursor     = 0
-      @cursor_24h = 0
-      @volume_24h = 0
+      @logger           = logger
+      @cursor           = 0
+      @cursor_24h       = 0
+      @volume_24h       = 0
+      @quote_volume_24h = 0
     end
 
     #
@@ -28,7 +29,8 @@ module Gekko
         @last_trade_price = message[:price]
 
         # Keep 24h volume up to date
-        @volume_24h += message[:base_size]
+        @volume_24h       += message[:base_size]
+        @quote_volume_24h += message[:quote_size]
         move_24h_cursor!
       end
 
@@ -52,9 +54,20 @@ module Gekko
     # Returns the traded volume for the last 24h
     #
     # @return [Fixnum] The last 24h volume
+    #
     def volume_24h
       move_24h_cursor!
       @volume_24h
+    end
+
+    #
+    # Returns the traded amount of quote currency in the last 24h
+    #
+    # @return [Fixnum] The last 24h quote currency volume
+    #
+    def quote_volume_24h
+      move_24h_cursor!
+      @quote_volume_24h
     end
 
     #
@@ -66,7 +79,8 @@ module Gekko
 
       while(self[@cursor_24h] && ((self[@cursor_24h][:type] != :execution) || (self[@cursor_24h][:time] < time_24h_ago)))
         if self[@cursor_24h] && self[@cursor_24h][:type] == :execution
-          @volume_24h -= self[@cursor_24h][:base_size]
+          @volume_24h       -= self[@cursor_24h][:base_size]
+          @quote_volume_24h -= self[@cursor_24h][:quote_size]
         end
 
         @cursor_24h += 1

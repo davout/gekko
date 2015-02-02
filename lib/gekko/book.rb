@@ -17,14 +17,15 @@ module Gekko
     # The default minimum price increment accepted for placed orders
     DEFAULT_TICK_SIZE = 1000
 
-    attr_accessor :pair, :bids, :asks, :tape, :tick_size, :received
+    attr_accessor :pair, :bids, :asks, :tape, :tick_size, :received, :base_precision
 
     def initialize(pair, opts = {})
-      self.pair       = pair
-      self.bids       = BookSide.new(:bid)
-      self.asks       = BookSide.new(:ask)
-      self.tape       = Tape.new(opts[:logger])
-      self.received   = {}
+      self.pair           = pair
+      self.bids           = BookSide.new(:bid)
+      self.asks           = BookSide.new(:ask)
+      self.tape           = Tape.new(opts[:logger])
+      self.base_precision = 8
+      self.received       = {}
 
       self.tick_size  = opts[:tick_size] || DEFAULT_TICK_SIZE
       raise "Tick size must be a positive integer if provided" if tick_size && (!tick_size.is_a?(Fixnum) || tick_size <= 0)
@@ -56,13 +57,13 @@ module Gekko
           trade_price   = next_match.price
           base_size   = [next_match.remaining, order.remaining].min
 
-          quoted_size = base_size / trade_price
+          quote_size = (base_size * trade_price) / (10 ** base_precision)
 
           tape << {
             type:             :execution,
             price:            trade_price,
             base_size:        base_size,
-            quoted_size:      quoted_size,
+            quote_size:       quote_size,
             maker_order_id:   next_match.id.to_s,
             taker_order_id:   order.id.to_s,
             time:             Time.now.to_f,
@@ -117,12 +118,14 @@ module Gekko
     # @return [Hash] The current ticker
     #
     def ticker
+      v24h = tape.volume_24h
       {
         last:       tape.last_trade_price,
         bid:        bid,
         ask:        ask,
         spread:     spread,
-        volume_24h: tape.volume_24h
+        volume_24h: v24h,
+        vwap_24h:   (v24h > 0) && (tape.quote_volume_24h * (10 ** base_precision)/ v24h)
       }
     end
 

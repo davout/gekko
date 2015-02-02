@@ -12,9 +12,9 @@ describe Gekko::Book do
     end
 
     it 'should return the price of the best bid' do
-      @book.receive_order(Gekko::Order.new(:bid, random_id, 1, 1000))
-      @book.receive_order(Gekko::Order.new(:bid, random_id, 1, 2000))
-      expect(@book.bid).to eql(2000)
+      @book.receive_order(Gekko::Order.new(:bid, random_id, 1_0000_0000, 100_0000))
+      @book.receive_order(Gekko::Order.new(:bid, random_id, 1_0000_0000, 200_0000))
+      expect(@book.bid).to eql(200_0000)
     end
   end
 
@@ -24,45 +24,39 @@ describe Gekko::Book do
     end
 
     it 'should return the price of the best ask' do
-      @book.receive_order(Gekko::Order.new(:ask, random_id, 1, 1000))
-      @book.receive_order(Gekko::Order.new(:ask, random_id, 1, 2000))
-      expect(@book.ask).to eql(1000)
+      @book.receive_order(Gekko::Order.new(:ask, random_id, 1_0000_0000, 100_0000))
+      @book.receive_order(Gekko::Order.new(:ask, random_id, 1_0000_0000, 200_0000))
+      expect(@book.ask).to eql(100_0000)
     end
   end
 
   context 'with a populated book' do
     before do
       populate_book(@book, {
-        bids: [[1000, 50000], [1000, 40000], [1000, 30000], [1000, 20000]],
-        asks: [[1000, 60000], [1000, 70000], [1000, 80000], [1000, 90000]]
+        bids: [[1_0000_0000, 500_0000], [1_0000_0000, 400_0000], [1_0000_0000, 300_0000], [1_0000_0000, 200_0000]],
+        asks: [[1_0000_0000, 600_0000], [1_0000_0000, 700_0000], [1_0000_0000, 800_0000], [1_0000_0000, 900_0000]]
       })
     end
 
     describe '#receive_order' do
       it 'should execute a bid properly' do
-        @book.receive_order(Gekko::Order.new(:bid, random_id, 2500, 80000))
-        expect(@book.asks.first.price).to eq(80000)
-        expect(@book.asks.first.remaining).to eq(500)
+        @book.receive_order(Gekko::Order.new(:bid, random_id, 2_5000_0000, 800_0000))
+        expect(@book.asks.first.price).to eq(800_0000)
+        expect(@book.asks.first.remaining).to eq(5000_0000)
         expect(@book.asks.count).to eq(2)
-        expect(@book.spread).to eq(30000)
-        expect(@book.ask).to eq(80000)
-        expect(@book.bid).to eq(50000)
+        expect(@book.spread).to eq(300_0000)
+        expect(@book.ask).to eq(800_0000)
+        expect(@book.bid).to eq(500_0000)
       end
 
       it 'should execute an ask properly' do
-        @book.receive_order(Gekko::Order.new(:ask, random_id, 2500, 30000))
-        expect(@book.bids.first.price).to eq(30000)
-        expect(@book.bids.first.remaining).to eq(500)
+        @book.receive_order(Gekko::Order.new(:ask, random_id, 2_5000_0000, 300_0000))
+        expect(@book.bids.first.price).to eq(300_0000)
+        expect(@book.bids.first.remaining).to eq(5000_0000)
         expect(@book.bids.count).to eq(2)
-        expect(@book.spread).to eq(30000)
-        expect(@book.ask).to eq(60000)
-        expect(@book.bid).to eq(30000)
-      end
-
-      it 'should refuse too precise prices' do
-        expect { @book.receive_order(Gekko::Order.new(:ask, random_id, 1000, @book.tick_size + 1)) }.to raise_error do |error|
-          expect(error).to be_a(Gekko::TickSizeMismatch)
-        end
+        expect(@book.spread).to eq(300_0000)
+        expect(@book.ask).to eq(600_0000)
+        expect(@book.bid).to eq(300_0000)
       end
 
       it 'should reject duplicate IDs' do
@@ -74,13 +68,14 @@ describe Gekko::Book do
 
     describe '#ticker' do
       it 'should return the ticker' do
-        @book.receive_order(Gekko::Order.new(:ask, random_id, 2500, 30000))
+        @book.receive_order(Gekko::Order.new(:ask, random_id, 2_5000_0000, 300_0000))
         expect(@book.ticker).to eql({
-          ask:        60000,
-          bid:        30000,
-          last:       30000,
-          spread:     30000,
-          volume_24h: 2500
+          ask:        600_0000,
+          bid:        300_0000,
+          last:       300_0000,
+          spread:     300_0000,
+          volume_24h: 2_5000_0000,
+          vwap_24h:   420_0000
         })
       end
     end
