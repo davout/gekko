@@ -17,13 +17,14 @@ module Gekko
     # The default minimum price increment accepted for placed orders
     DEFAULT_TICK_SIZE = 1000
 
-    attr_accessor :pair, :bids, :asks, :tape, :tick_size
+    attr_accessor :pair, :bids, :asks, :tape, :tick_size, :received
 
     def initialize(pair, opts = {})
       self.pair       = pair
       self.bids       = BookSide.new(:bid)
       self.asks       = BookSide.new(:ask)
       self.tape       = Tape.new(opts[:logger])
+      self.received   = {}
 
       self.tick_size  = opts[:tick_size] || DEFAULT_TICK_SIZE
       raise "Tick size must be a positive integer if provided" if tick_size && (!tick_size.is_a?(Fixnum) || tick_size <= 0)
@@ -36,51 +37,54 @@ module Gekko
     #
     def receive_order(order)
 
+      #binding.pry
       raise Gekko::TickSizeMismatch unless (order.price % tick_size).zero?
 
-      tape << order.message(:received)
+      if received.has_key?(order.id.to_s)
+        tape << order.message(:reject, reason: "Duplicate ID <#{order.id.to_s}>")
 
-      order_side    = order.bid? ? bids : asks
-      opposite_side = order.bid? ? asks : bids
-      next_match    = opposite_side.first
+      else
+        self.received[order.id.to_s] = order
+        tape << order.message(:received)
 
-      while !order.filled? && order.crosses?(next_match)
+        order_side    = order.bid? ? bids : asks
+        opposite_side = order.bid? ? asks : bids
+        next_match    = opposite_side.first
 
-        trade_price   = next_match.price
-        base_size   = [next_match.remaining, order.remaining].min
+        while !order.filled? && order.crosses?(next_match)
 
-        quoted_size = base_size / trade_price
+          trade_price   = next_match.price
+          base_size   = [next_match.remaining, order.remaining].min
 
-        tape << {
-          type:             :execution,
-          price:            trade_price,
-          base_size:        base_size,
-          quoted_size:      quoted_size,
-          maker_order_id:   next_match.id.to_s,
-          taker_order_id:   order.id.to_s,
-          time:             Time.now.to_f,
-          tick:             order.bid? ? :up : :down
-        }
+          quoted_size = base_size / trade_price
 
-        executions_24h << [base, trade_price, Time.now.to_f]
+          tape << {
+            type:             :execution,
+            price:            trade_price,
+            base_size:        base_size,
+            quoted_size:      quoted_size,
+            maker_order_id:   next_match.id.to_s,
+            taker_order_id:   order.id.to_s,
+            time:             Time.now.to_f,
+            tick:             order.bid? ? :up : :down
+          }
 
-        order.remaining       -= base_size
-        next_match.remaining  -= base_size
+          order.remaining       -= base_size
+          next_match.remaining  -= base_size
 
-        if next_match.filled?
-          tape << opposite_side.shift.message(:done, reason: :filled)
-          next_match = opposite_side.first
+          if next_match.filled?
+            tape << opposite_side.shift.message(:done, reason: :filled)
+            next_match = opposite_side.first
+          end
+        end
+
+        if order.filled?
+          tape << order.message(:done, reason: :filled)
+        else
+          order_side.insert_order(order)
+          tape << order.message(:open)
         end
       end
-
-      if order.filled?
-        tape << order.message(:done, reason: :filled)
-      else
-        order_side.insert_order(order)
-        tape << order.message(:open)
-      end
-
-      tick!
     end
 
     #
@@ -107,23 +111,18 @@ module Gekko
       ask && bid && (ask - bid)
     end
 
-    def tick!
-      tape << {
-        type:   :ticker,
+    #
+    # Returns the current ticker
+    #
+    # @return [Hash] The current ticker
+    #
+    def ticker
+      {
+        last:   tape.last_trade_price,
         bid:    bid,
         ask:    ask,
-        spread: spread,
-        last:   last,
-        high:   high,
-        low:    low,
-        volume: volume,
-        vwap:   vwap,
-        time:   Time.now.to_f
+        spread: spread
       }
-    end
-
-    def to_s
-      "Bids: <#{bids.map { |o| "#{o.remaining}@#{o.price}" }. join(', ')}> -- Asks: <#{asks.map { |o| "#{o.remaining}@#{o.price}" }. join(', ')}>"
     end
 
   end

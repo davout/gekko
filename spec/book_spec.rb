@@ -63,5 +63,22 @@ describe Gekko::Book do
         expect(error).to be_a(Gekko::TickSizeMismatch)
       end
     end
+
+    it 'should reject duplicate IDs' do
+      order = Gekko::Order.new(:ask, random_id, 1000, @book.tick_size)
+      2.times { @book.receive_order(order) }
+      expect(@book.tape.last[:type]).to eql(:reject)
+    end
+
+    it 'should return the ticker' do
+      @book.receive_order(Gekko::Order.new(:ask, random_id, 2500, 30000))
+      expect(@book.ticker).to eql({
+        ask:    60000,
+        bid:    30000,
+        last:   30000,
+        spread: 30000
+      })
+    end
   end
+
 end

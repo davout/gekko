@@ -5,7 +5,7 @@ module Gekko
   #
   class Tape < Array
 
-    attr_accessor :events, :logger
+    attr_accessor :events, :logger, :last_trade_price
 
     def initialize(logger = nil)
       @logger = logger
@@ -20,6 +20,11 @@ module Gekko
     def <<(message)
       message[:sequence] = length
       logger && logger.info(message)
+
+      if message[:type] == :execution
+        @last_trade_price = message[:price]
+      end
+
       super(message)
     end
 
@@ -38,3 +43,4 @@ module Gekko
 
   end
 end
+
