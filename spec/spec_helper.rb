@@ -1,5 +1,5 @@
 require 'pry'
-
+require 'timecop'
 require 'simplecov'
 require 'coveralls'
 
