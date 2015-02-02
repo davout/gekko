@@ -10,17 +10,18 @@ module Gekko
     attr_accessor :id, :side, :size, :remaining, :price, :expiration, :created_at
 
     def initialize(side, id, size, price, expiration = nil)
+
       @id         = id
-      @side       = side
-      @size     = size
+      @side       = side && side.to_sym
+      @size       = size
       @remaining  = @size
       @price      = price
       @expiration = expiration
       @created_at = Time.now.to_f
 
       raise 'Orders must have an UUID'                        unless @id && @id.is_a?(UUID)
-      raise 'Side must be either :bid or :ask'                unless [:bid, :ask].include?(side)
-      raise 'Price must be a positive integer or be omitted'  if (@price && (!@price.is_a?(Fixnum) || (@price <= 0)))
+      raise 'Side must be either :bid or :ask'                unless [:bid, :ask].include?(@side)
+      raise 'Price must be a positive integer'                if @price.nil? || (!@price.is_a?(Fixnum) || (@price <= 0))
       raise 'Size must be a positive integer'                 if (@size && (!@size.is_a?(Fixnum) || @size <= 0))
       raise 'Expiration must be omitted or be an integer'     unless (@expiration.nil? || (@expiration.is_a?(Fixnum) && @expiration > 0))
       raise 'The order creation timestamp can''t be nil'      if !@created_at
@@ -57,7 +58,7 @@ module Gekko
     def message(type, extra_attrs = {})
       {
         type:       type,
-        order_id:   id,
+        order_id:   id.to_s,
         side:       side,
         size:       size,
         remaining:  remaining,
