@@ -12,17 +12,19 @@ module Gekko
     # TODO: Add order size limits
     # TODO: Add order expiration
     # TODO: Test for rounding issues
+    # TODO: Check for order ID unicity and add reject messages
 
     # The default minimum price increment accepted for placed orders
     DEFAULT_TICK_SIZE = 1000
 
-    attr_accessor :pair, :bids, :asks, :tape, :tick_size
+    attr_accessor :pair, :bids, :asks, :tape, :tick_size, :received
 
     def initialize(pair, opts = {})
       self.pair       = pair
       self.bids       = BookSide.new(:bid)
       self.asks       = BookSide.new(:ask)
       self.tape       = Tape.new(opts[:logger])
+      self.received   = {}
 
       self.tick_size  = opts[:tick_size] || DEFAULT_TICK_SIZE
       raise "Tick size must be a positive integer if provided" if tick_size && (!tick_size.is_a?(Fixnum) || tick_size <= 0)
@@ -35,44 +37,53 @@ module Gekko
     #
     def receive_order(order)
 
+      #binding.pry
       raise Gekko::TickSizeMismatch unless (order.price % tick_size).zero?
 
-      order_side    = order.bid? ? bids : asks
-      opposite_side = order.bid? ? asks : bids
-      next_match    = opposite_side.first
+      if received.has_key?(order.id.to_s)
+        tape << order.message(:reject, reason: "Duplicate ID <#{order.id.to_s}>")
 
-      while !order.filled? && order.crosses?(next_match)
-
-        trade_price   = next_match.price
-        base_size   = [next_match.remaining, order.remaining].min
-
-        quoted_size = base_size / trade_price
-
-        tape << {
-          type:             :execution,
-          price:            trade_price,
-          base_size:        base_size,
-          quoted_size:      quoted_size,
-          maker_order_id:   next_match.id,
-          taker_order_id:   order.id,
-          time:             Time.now.to_f,
-          tick:             order.bid? ? :up : :down
-        }
-
-        order.remaining       -= base_size
-        next_match.remaining  -= base_size
-
-        if next_match.filled?
-          tape << opposite_side.shift.message(:done, reason: :filled)
-          next_match = opposite_side.first
-        end
-      end
-
-      if order.filled?
-        tape << order.message(:done, reason: :filled)
       else
-        order_side.insert_order(order)
-        tape << order.message(:open)
+        self.received[order.id.to_s] = order
+        tape << order.message(:received)
+
+        order_side    = order.bid? ? bids : asks
+        opposite_side = order.bid? ? asks : bids
+        next_match    = opposite_side.first
+
+        while !order.filled? && order.crosses?(next_match)
+
+          trade_price   = next_match.price
+          base_size   = [next_match.remaining, order.remaining].min
+
+          quoted_size = base_size / trade_price
+
+          tape << {
+            type:             :execution,
+            price:            trade_price,
+            base_size:        base_size,
+            quoted_size:      quoted_size,
+            maker_order_id:   next_match.id.to_s,
+            taker_order_id:   order.id.to_s,
+            time:             Time.now.to_f,
+            tick:             order.bid? ? :up : :down
+          }
+
+          order.remaining       -= base_size
+          next_match.remaining  -= base_size
+
+          if next_match.filled?
+            tape << opposite_side.shift.message(:done, reason: :filled)
+            next_match = opposite_side.first
+          end
+        end
+
+        if order.filled?
+          tape << order.message(:done, reason: :filled)
+        else
+          order_side.insert_order(order)
+          tape << order.message(:open)
+        end
       end
     end
 
@@ -98,6 +109,20 @@ module Gekko
     #
     def spread
       ask && bid && (ask - bid)
+    end
+
+    #
+    # Returns the current ticker
+    #
+    # @return [Hash] The current ticker
+    #
+    def ticker
+      {
+        last:   tape.last_trade_price,
+        bid:    bid,
+        ask:    ask,
+        spread: spread
+      }
     end
 
   end
