@@ -2,7 +2,7 @@ module Gekko
 
   #
   # Represents a trade order. Trade orders can be either buy (bid) or sell (ask) orders.
-  # All orders are identified by an UUID, must specify a size, a price, and an optional
+  # All orders are identified by an UUID, and must specify a size, and an optional
   # expiration timestamp.
   #
   class Order
@@ -10,40 +10,34 @@ module Gekko
     attr_accessor :id, :side, :size, :remaining, :price, :expiration, :created_at
 
     def initialize(side, id, size, price, expiration = nil)
-
       @id         = id
       @side       = side && side.to_sym
       @size       = size
       @remaining  = @size
-      @price      = price
       @expiration = expiration
       @created_at = Time.now.to_f
 
-      raise 'Orders must have an UUID'                        unless @id && @id.is_a?(UUID)
-      raise 'Side must be either :bid or :ask'                unless [:bid, :ask].include?(@side)
-      raise 'Price must be a positive integer'                if @price.nil? || (!@price.is_a?(Fixnum) || (@price <= 0))
-      raise 'Size must be a positive integer'                 if (@size && (!@size.is_a?(Fixnum) || @size <= 0))
-      raise 'Expiration must be omitted or be an integer'     unless (@expiration.nil? || (@expiration.is_a?(Fixnum) && @expiration > 0))
-      raise 'The order creation timestamp can''t be nil'      if !@created_at
+      raise 'Orders must have an UUID'                    unless @id && @id.is_a?(UUID)
+      raise 'Side must be either :bid or :ask'            unless [:bid, :ask].include?(@side)
+      raise 'Size must be a positive integer'             if (@size && (!@size.is_a?(Fixnum) || @size <= 0))
+      raise 'Expiration must be omitted or be an integer' unless (@expiration.nil? || (@expiration.is_a?(Fixnum) && @expiration > 0))
+      raise 'The order creation timestamp can''t be nil'  if !@created_at
     end
 
     #
-    # Returns +true+ if this order can execute against +other_order+
+    # Returns +true+ if this order can execute against +limit_order+
     #
-    # @param other [Order] The other order against which we want 
+    # @param limit_order [LimitOrder] The limit order against which we want 
     #   to know if an execution is possible
     #
-    def crosses?(other)
-      if other && (bid? ^ other.bid?)
-        (bid? && (price >= other.price)) || (ask? && (price <= other.price))
-      end
-    end
+    def crosses?(limit_order)
+      if limit_order
+        raise 'Can not test againt a market order' unless limit_order.is_a?(LimitOrder)
 
-    #
-    # Returns +true+ if the order is filled
-    #
-    def filled?
-      remaining.zero?
+        if bid? ^ limit_order.bid?
+          is_a?(MarketOrder) || (bid? && (price >= limit_order.price)) || (ask? && (price <= limit_order.price))
+        end
+      end
     end
 
     #
@@ -78,6 +72,14 @@ module Gekko
     #
     def ask?
       !bid?
+    end
+
+    #
+    # Returns +true+ if this order isn't supposed to stick around in
+    # the order book
+    #
+    def fill_or_kill?
+      is_a?(Gekko::MarketOrder)
     end
 
   end

@@ -12,7 +12,6 @@ module Gekko
     # TODO: Add order size limits
     # TODO: Add order expiration
     # TODO: Test for rounding issues
-    # TODO: Check for order ID unicity and add reject messages
 
     # The default minimum price increment accepted for placed orders
     DEFAULT_TICK_SIZE = 1000
@@ -38,8 +37,9 @@ module Gekko
     #
     def receive_order(order)
 
-      #binding.pry
-      raise Gekko::TickSizeMismatch unless (order.price % tick_size).zero?
+      raise 'Order must be a Gekko::LimitOrder or a Gekko::MarketOrder' unless [LimitOrder, MarketOrder].include?(order.class)
+
+      raise Gekko::TickSizeMismatch unless (order.is_a?(MarketOrder) || (order.price % tick_size).zero?)
 
       if received.has_key?(order.id.to_s)
         tape << order.message(:reject, reason: "Duplicate ID <#{order.id.to_s}>")
@@ -52,12 +52,24 @@ module Gekko
         opposite_side = order.bid? ? asks : bids
         next_match    = opposite_side.first
 
-        while !order.filled? && order.crosses?(next_match)
-
+        while !order.done? && order.crosses?(next_match)
           trade_price   = next_match.price
           base_size   = [next_match.remaining, order.remaining].min
 
-          quote_size = (base_size * trade_price) / (10 ** base_precision)
+          if order.is_a?(LimitOrder)
+            quote_size = (base_size * trade_price) / (10 ** base_precision)
+
+          elsif order.is_a?(MarketOrder)
+            if order.ask? || (order.remaining_quote_margin > ((trade_price * base_size) / (10 ** base_precision)))
+              quote_size = ((trade_price * base_size) / (10 ** base_precision))
+              order.remaining_quote_margin -= quote_size if order.bid?
+            elsif order.bid?
+              quote_size = order.remaining_quote_margin
+              base_size = (order.remaining_quote_margin * (10 ** base_precision)) / trade_price
+              order.remaining_quote_margin -= quote_size
+            end
+          end
+
 
           tape << {
             type:             :execution,
@@ -81,6 +93,8 @@ module Gekko
 
         if order.filled?
           tape << order.message(:done, reason: :filled)
+        elsif order.fill_or_kill?
+          tape << order.message(:done, reason: :killed)
         else
           order_side.insert_order(order)
           tape << order.message(:open)

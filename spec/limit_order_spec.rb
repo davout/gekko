@@ -1,5 +1,5 @@
 require_relative './spec_helper'
 
-describe Gekko::Order do
+describe Gekko::LimitOrder do
 end
 
