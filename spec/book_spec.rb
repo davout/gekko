@@ -60,7 +60,7 @@ describe Gekko::Book do
       end
 
       it 'should reject duplicate IDs' do
-        order = Gekko::LimitOrder.new(:ask, random_id, 1_0000_0000, @book.tick_size)
+        order = Gekko::LimitOrder.new(:ask, random_id, 1_0000_0000, 1_0000)
         2.times { @book.receive_order(order) }
         expect(@book.tape.last[:type]).to eql(:reject)
       end

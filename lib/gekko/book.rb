@@ -13,21 +13,15 @@ module Gekko
     # TODO: Add order expiration
     # TODO: Test for rounding issues
 
-    # The default minimum price increment accepted for placed orders
-    DEFAULT_TICK_SIZE = 1000
-
-    attr_accessor :pair, :bids, :asks, :tape, :tick_size, :received, :base_precision
+    attr_accessor :pair, :bids, :asks, :tape, :received, :base_precision
 
     def initialize(pair, opts = {})
       self.pair           = pair
       self.bids           = BookSide.new(:bid)
       self.asks           = BookSide.new(:ask)
       self.tape           = Tape.new(opts[:logger])
-      self.base_precision = 8
+      self.base_precision = opts[:base_precision] || 8
       self.received       = {}
-
-      self.tick_size  = opts[:tick_size] || DEFAULT_TICK_SIZE
-      raise "Tick size must be a positive integer if provided" if tick_size && (!tick_size.is_a?(Fixnum) || tick_size <= 0)
     end
 
     #
@@ -38,8 +32,6 @@ module Gekko
     def receive_order(order)
 
       raise 'Order must be a Gekko::LimitOrder or a Gekko::MarketOrder' unless [LimitOrder, MarketOrder].include?(order.class)
-
-      raise Gekko::TickSizeMismatch unless (order.is_a?(MarketOrder) || (order.price % tick_size).zero?)
 
       if received.has_key?(order.id.to_s)
         tape << order.message(:reject, reason: "Duplicate ID <#{order.id.to_s}>")
