@@ -62,7 +62,6 @@ module Gekko
             end
           end
 
-
           tape << {
             type:             :execution,
             price:            trade_price,
@@ -92,6 +91,8 @@ module Gekko
           tape << order.message(:open)
         end
       end
+
+      tape << { type: :ticker }.merge(ticker)
     end
 
     #
