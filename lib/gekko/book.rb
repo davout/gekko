@@ -90,6 +90,8 @@ module Gekko
           order_side.insert_order(order)
           tape << order.message(:open)
         end
+
+        tape << { type: :ticker }.merge(ticker)
       end
 
       tape << { type: :ticker }.merge(ticker)
