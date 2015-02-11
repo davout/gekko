@@ -76,7 +76,7 @@ describe Gekko::Book do
         expect(@book.ask).to eql(700_0000)
         expect(@book.ticker[:last]).to eql(600_0000)
         expect(@book.ticker[:volume_24h]).to eql(1_0000_0000)
-        #@book.tape.delete(@book.tape.length + 1)
+        @book.tape.delete_at(@book.tape.length - 1)
         expect(@book.tape.last[:reason]).to eql(:filled)
       end 
 
@@ -90,7 +90,7 @@ describe Gekko::Book do
         expect(@book.bid).to eql(400_0000)
         expect(@book.ticker[:last]).to eql(500_0000)
         expect(@book.ticker[:volume_24h]).to eql(1_0000_0000)
-        #@book.tape.delete(@book.tape.length + 1)
+        @book.tape.delete_at(@book.tape.length - 1)
         expect(@book.tape.last[:reason]).to eql(:filled)
       end 
 
@@ -105,7 +105,7 @@ describe Gekko::Book do
         expect(@book.ask).to eql(600_0000)
         expect(@book.ticker[:last]).to eql(600_0000)
         expect(@book.ticker[:volume_24h]).to eql(6666_6666)
-        #@book.tape.delete(@book.tape.length + 1)
+        @book.tape.delete_at(@book.tape.length - 1)
         expect(@book.tape.last[:reason]).to eql(:killed)
       end 
 
@@ -114,10 +114,13 @@ describe Gekko::Book do
     describe '#ticker' do
       it 'should return the ticker' do
         @book.receive_order(Gekko::LimitOrder.new(:ask, random_id, 2_5000_0000, 300_0000))
+        #binding.pry
         expect(@book.ticker).to eql({
           ask:        600_0000,
           bid:        300_0000,
           last:       300_0000,
+          high_24h:   300_0000,
+          low_24h:    300_0000,
           spread:     300_0000,
           volume_24h: 2_5000_0000,
           vwap_24h:   420_0000

@@ -111,12 +111,15 @@ module Gekko
         x = self[@cursor_24h]
 
         if x && x[:type] == :execution
+
+#binding.pry
+
           @volume_24h       -= x[:base_size]
           @quote_volume_24h -= x[:quote_size]
 
-          if x[:price] >= @high_24h
+          if @high_24h.nil? || (x[:price] >= @high_24h)
             recalc_high_24h!
-          elsif x[:price] <= @low_24h
+          elsif @low_24h.nil? || (x[:price] <= @low_24h)
             recalc_low_24h!
           end
         end

@@ -96,6 +96,17 @@ module Gekko
     end
 
     #
+    # Cancels an order given an ID
+    #
+    # @param order_id [String] The ID of the order to cancel
+    #
+    def cancel(order_id)
+      o = received[order_id.to_s]
+      dels = o.bid? ? bids.delete(o) : asks.delete(o)
+      dels && tape << order.message(:done, reason: :cancelled)
+    end
+
+    #
     # Returns the current best ask price or +nil+ if there
     # are currently no asks
     #
@@ -130,6 +141,8 @@ module Gekko
         last:       tape.last_trade_price,
         bid:        bid,
         ask:        ask,
+        high_24h:   tape.high_24h,
+        low_24h:    tape.low_24h,
         spread:     spread,
         volume_24h: v24h,
         vwap_24h:   (v24h > 0) && (tape.quote_volume_24h * (10 ** base_precision)/ v24h)
