@@ -93,6 +93,8 @@ module Gekko
 
         tape << { type: :ticker }.merge(ticker)
       end
+
+      tape << { type: :ticker }.merge(ticker)
     end
 
     #
