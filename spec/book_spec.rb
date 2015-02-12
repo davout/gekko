@@ -109,6 +109,17 @@ describe Gekko::Book do
         expect(@book.tape.last[:reason]).to eql(:killed)
       end 
 
+      it 'should not emit a ticker if the bid is not changed' do
+        bid = Gekko::LimitOrder.new(:bid, random_id, 1_0000_0000, 450_0000)
+        expect(@book).not_to receive(:tick!)
+        @book.receive_order(bid)
+      end
+
+      it 'should emit a ticker if the bid is changed' do
+        bid  = Gekko::LimitOrder.new(:bid, random_id, 1_0000_0000, 550_0000)
+        expect(@book).to receive(:tick!).once
+        @book.receive_order(bid)
+      end
     end
 
     describe '#ticker' do

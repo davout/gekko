@@ -33,6 +33,8 @@ module Gekko
         tape << order.message(:reject, reason: "Duplicate ID <#{order.id.to_s}>")
 
       else
+        old_ticker = ticker
+
         self.received[order.id.to_s] = order
         tape << order.message(:received)
 
@@ -87,7 +89,7 @@ module Gekko
           tape << order.message(:open)
         end
 
-        tick!
+        tick! unless (ticker == old_ticker)
       end
     end
 
