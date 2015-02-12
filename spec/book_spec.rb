@@ -114,12 +114,11 @@ describe Gekko::Book do
     describe '#ticker' do
       it 'should return the ticker' do
         @book.receive_order(Gekko::LimitOrder.new(:ask, random_id, 2_5000_0000, 300_0000))
-        #binding.pry
         expect(@book.ticker).to eql({
           ask:        600_0000,
           bid:        300_0000,
           last:       300_0000,
-          high_24h:   300_0000,
+          high_24h:   500_0000,
           low_24h:    300_0000,
           spread:     300_0000,
           volume_24h: 2_5000_0000,
@@ -127,6 +126,37 @@ describe Gekko::Book do
         })
       end
     end
+
+    describe '#cancel' do
+      before do
+        @best_bid_oid   = @book.bids[0].id
+        @second_bid_oid = @book.bids[1].id
+      end
+
+      it 'should knock an order off the book' do
+        expect { @book.cancel(@best_bid_oid) }.to change { @book.bids.size }.by(-1)
+      end
+
+      it 'should update the ticker if necessary' do
+        expect { @book.cancel(@best_bid_oid) }.to change { @book.bid }.from(500_0000).to(400_0000)
+      end
+
+      it 'should not update the ticker if not necessary' do
+        expect { @book.cancel(@second_bid_oid) }.not_to change { @book.bid }
+      end
+
+      it 'should emit a done message with the cancelled reason' do
+        @book.cancel(@second_bid_oid)
+        expect(@book.tape.last).to include({ type: :done, reason: :cancelled, order_id: @second_bid_oid.to_s })
+      end
+
+      it 'should emit a ticker message if the bid or ask is changed' do
+        @book.cancel(@best_bid_oid)
+        expect(@book.tape.last).to include({ type: :ticker, bid: 400_0000 })
+        expect(@book.tape[@book.tape.length - 2]).to include({ type: :done, reason: :cancelled })
+      end
+    end
   end
 
 end
+

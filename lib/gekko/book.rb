@@ -9,10 +9,6 @@ module Gekko
   #
   class Book
 
-    # TODO: Add order size limits
-    # TODO: Add order expiration
-    # TODO: Test for rounding issues
-
     attr_accessor :pair, :bids, :asks, :tape, :received, :base_precision
 
     def initialize(pair, opts = {})
@@ -91,10 +87,8 @@ module Gekko
           tape << order.message(:open)
         end
 
-        tape << { type: :ticker }.merge(ticker)
+        tick!
       end
-
-      tape << { type: :ticker }.merge(ticker)
     end
 
     #
@@ -103,9 +97,14 @@ module Gekko
     # @param order_id [String] The ID of the order to cancel
     #
     def cancel(order_id)
-      o = received[order_id.to_s]
-      dels = o.bid? ? bids.delete(o) : asks.delete(o)
+      prev_bid = bid
+      prev_ask = ask
+
+      order = received[order_id.to_s]
+      dels = order.bid? ? bids.delete(order) : asks.delete(order)
       dels && tape << order.message(:done, reason: :cancelled)
+
+      tick! if (prev_bid != bid) || (prev_ask != ask)
     end
 
     #
@@ -130,6 +129,13 @@ module Gekko
     #
     def spread
       ask && bid && (ask - bid)
+    end
+
+    #
+    # Emits a ticker on the tape
+    #
+    def tick!
+      tape << { type: :ticker }.merge(ticker)
     end
 
     #

@@ -24,17 +24,11 @@ module Gekko
       message[:sequence] = length
       logger && logger.info(message)
 
-      if message[:type] == :execution
-        # Keep last price up to date
-        @last_trade_price = message[:price]
-
-        # Keep 24h volume up to date
-        @volume_24h       += message[:base_size]
-        @quote_volume_24h += message[:quote_size]
-        move_24h_cursor!
-      end
-
       super(message)
+
+      if message[:type] == :execution
+        update_ticker(message)
+      end
     end
 
     #
@@ -60,34 +54,45 @@ module Gekko
       @volume_24h
     end
 
+    #
+    # Returns the highest trade price that occurred during the last 24h
+    #
+    # @return [Fixnum] The last 24h high
+    #
     def high_24h
       move_24h_cursor!
       @high_24h
     end
 
-    def recalc_high_24h!
-      @high_24h = nil
-      # The cursor hasn't yet been incremented
-      ((@cursor_24h+1)..(length-1)).each do |idx|
-        if (self[idx][:type] == :execution) && (@high_24H.nil? || (self[idx][:price] > @high_24h))
-          @high_24h = self[idx][:price]
-        end
-      end
-    end
-
-    def recalc_low_24h!
-      @low_24h = nil
-      # The cursor hasn't yet been incremented
-      ((@cursor_24h+1)..(length-1)).each do |idx|
-        if (self[idx][:type] == :execution) && (@low_24h.nil? || (self[idx][:price] < @low_24h))
-          @low_24h = self[idx][:price]
-        end
-      end
-    end
-
+    #
+    # Returns the lowest trade price that occurred during the last 24h
+    #
+    # @return [Fixnum] The last 24h low
+    #
     def low_24h
       move_24h_cursor!
       @low_24h
+    end
+
+    #
+    # Recalculates the previous 24h high and low
+    #
+    def recalc_high_low_24h!
+      @high_24h = nil
+      @low_24h  = nil
+
+      # Work backwards from current position until the cursor points to an event
+      # that's older than 24h
+      tmp_cursor  = (length - 1)
+      evt         = self[tmp_cursor]
+
+      while (evt && (evt[:time] >= time_24h_ago)) do
+        @high_24h = ((@high_24h.nil? || (evt[:price] > @high_24h)) && evt[:price]) || @high_24h
+        @low_24h  = ((@low_24h.nil?  || (evt[:price] < @low_24h))  && evt[:price]) || @low_24h
+
+        tmp_cursor -= 1
+        evt = (tmp_cursor >= 0) && self[tmp_cursor]
+      end
     end
 
     #
@@ -101,30 +106,64 @@ module Gekko
     end
 
     #
+    # Updates the ticker after an execution has been recorded
+    #
+    def update_ticker(execution)
+      price = execution[:price]
+
+      # Keep last price up to date
+      @last_trade_price = price
+
+      # Keep 24h volume up to date
+      @volume_24h       += execution[:base_size]
+      @quote_volume_24h += execution[:quote_size]
+
+      # Record new high/lows
+      if @high_24h.nil? || (@high_24h < price)
+        @high_24h = price
+      end
+
+      if @low_24h.nil? || (price < @low_24h)
+        @low_24h = price
+      end
+
+      move_24h_cursor!
+    end
+
+    #
+    # Returns the float timestamp of 24h ago
+    #
+    # @return [Float] Yesterday's cut-off timestamp
+    #
+    def time_24h_ago
+      Time.now.to_f - 24*3600
+    end
+
+    #
     # Moves the cursor pointing to the first trade that happened during
-    # the last 24h and updates the volume along the way
+    # the last 24h. Every execution getting out of the 24h rolling window is
+    # passed to Tape#fall_out_of_24h_window  
     #
     def move_24h_cursor!
-      time_24h_ago = Time.now.to_f - 24*3600
-
       while(self[@cursor_24h] && ((self[@cursor_24h][:type] != :execution) || (self[@cursor_24h][:time] < time_24h_ago)))
-        x = self[@cursor_24h]
-
-        if x && x[:type] == :execution
-
-#binding.pry
-
-          @volume_24h       -= x[:base_size]
-          @quote_volume_24h -= x[:quote_size]
-
-          if @high_24h.nil? || (x[:price] >= @high_24h)
-            recalc_high_24h!
-          elsif @low_24h.nil? || (x[:price] <= @low_24h)
-            recalc_low_24h!
-          end
+        if self[@cursor_24h][:type] == :execution
+          fall_out_of_24h_window(self[@cursor_24h])
         end
 
         @cursor_24h += 1
+      end
+    end
+
+    #
+    # Updates the low, high, and volumes when an execution falls out of the rolling
+    # previous 24h window
+    # 
+    def fall_out_of_24h_window(execution)
+      @volume_24h       -= execution[:base_size]
+      @quote_volume_24h -= execution[:quote_size]
+
+      if [@high_24h, @low_24h].include?(execution[:price])
+        recalc_high_low_24h!
       end
     end
   end

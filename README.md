@@ -7,3 +7,10 @@ Gekko is intended to become a high-performance in-memory trade order matching en
 ## What Gekko is not
 Gekko is not intended to maintain an accounting database, it just matches trade orders associated to accounts, and returns the necessary data for an accounting system to record the trades (usually against some sort of RDBMS).
 
+## Left to do
+The following items are left to do and will need to be implemented before gekko is considered production-ready.
+
+ - Persistence and failure recovery
+ - Add and enforce minimum and maximum order sizes
+ - Correctly handle order expiration
+
