@@ -39,6 +39,29 @@ describe Gekko::Book do
     end
 
     describe '#receive_order' do
+      it 'should remove expired orders as they come during executions' do
+        @book.bids[0].expiration = @book.bids[1].expiration = (Time.now.to_i - 1)
+        @book.receive_order(Gekko::LimitOrder.new(:ask, random_id, 2_0000_0000, 200_0000))
+
+        # Expect tape to contain two done messages for expired orders that were still hanging
+        # around in the order book
+        expect(@book.tape.select { |i| (i[:type] == :done) && (i[:reason] == :expired) }.size).to eql(2)
+        expect(@book.ticker[:vwap_24h]).to eql(250_0000)
+        expect(@book.ticker[:last]).to eql(200_0000)
+        expect(@book.ticker[:volume_24h]).to eql(2_0000_0000)
+      end
+
+      it 'should not execute expired orders' do
+        expired_order = Gekko::LimitOrder.new(:bid, random_id, 1_0000_0000, 800_0000, (Time.now.to_i - 1))
+        original_tape_size = @book.tape.size
+        @book.receive_order(expired_order)
+        last_msg = @book.tape.last
+        expect(last_msg[:type]).to eql(:reject)
+        expect(last_msg[:reason]).to eql(:expired)
+        expect(last_msg[:order_id]).to eql(expired_order.id.to_s)
+        expect(@book.tape.size - 1).to eql(original_tape_size)
+      end
+
       it 'should execute a limit bid properly' do
         @book.receive_order(Gekko::LimitOrder.new(:bid, random_id, 2_5000_0000, 800_0000))
         expect(@book.asks.first.price).to eq(800_0000)
@@ -166,6 +189,38 @@ describe Gekko::Book do
         expect(@book.tape.last).to include({ type: :ticker, bid: 400_0000 })
         expect(@book.tape[@book.tape.length - 2]).to include({ type: :done, reason: :cancelled })
       end
+    end
+  end
+
+  context 'with some expiring orders in the book' do
+    before do
+      populate_book_in_the_past(@book, {
+        bids: [[1_0000_0000, 500_0000, (Time.now.to_i - 10)], [1_0000_0000, 400_0000, (Time.now.to_i - 10)], [1_0000_0000, 300_0000, (Time.now.to_i + 1000)]],
+        asks: [[1_0000_0000, 600_0000], [1_0000_0000, 700_0000, (Time.now.to_i - 10)]]
+      })
+    end
+
+    it 'should remove expired orders from both sides of the book' do
+      original_tape_size = @book.tape.size
+      expect(@book.bids.size + @book.asks.size).to eql(5)
+      @book.remove_expired!
+      expect(@book.bids.size + @book.asks.size).to eql(2)
+      expect(@book.tape.size - 4).to eql(original_tape_size) # 3 canceled orders and one ticker
+
+      expect(@book.tape.pop[:type]).to eql(:ticker)
+
+      3.times do
+        last_evt = @book.tape.pop
+        expect(last_evt[:type]).to eql(:done)
+        expect(last_evt[:reason]).to eql(:expired)
+      end
+    end
+
+    it 'should update the ticker as required' do
+      expect(@book.ticker[:bid]).to eql(500_0000)
+      @book.remove_expired!
+      expect(@book.tape.last[:type]).to eql(:ticker)
+      expect(@book.ticker[:bid]).to eql(300_0000)
     end
   end
 

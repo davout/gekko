@@ -30,7 +30,10 @@ module Gekko
       raise 'Order must be a Gekko::LimitOrder or a Gekko::MarketOrder' unless [LimitOrder, MarketOrder].include?(order.class)
 
       if received.has_key?(order.id.to_s)
-        tape << order.message(:reject, reason: "Duplicate ID <#{order.id.to_s}>")
+        tape << order.message(:reject, reason: :duplicate_id)
+
+      elsif order.expired?
+        tape << order.message(:reject, reason: :expired)
 
       else
         old_ticker = ticker
@@ -43,40 +46,46 @@ module Gekko
         next_match    = opposite_side.first
 
         while !order.done? && order.crosses?(next_match)
-          trade_price   = next_match.price
-          base_size   = [next_match.remaining, order.remaining].min
-
-          if order.is_a?(LimitOrder)
-            quote_size = (base_size * trade_price) / (10 ** base_precision)
-
-          elsif order.is_a?(MarketOrder)
-            if order.ask? || (order.remaining_quote_margin > ((trade_price * base_size) / (10 ** base_precision)))
-              quote_size = ((trade_price * base_size) / (10 ** base_precision))
-              order.remaining_quote_margin -= quote_size if order.bid?
-            elsif order.bid?
-              quote_size = order.remaining_quote_margin
-              base_size = (order.remaining_quote_margin * (10 ** base_precision)) / trade_price
-              order.remaining_quote_margin -= quote_size
-            end
-          end
-
-          tape << {
-            type:             :execution,
-            price:            trade_price,
-            base_size:        base_size,
-            quote_size:       quote_size,
-            maker_order_id:   next_match.id.to_s,
-            taker_order_id:   order.id.to_s,
-            time:             Time.now.to_f,
-            tick:             order.bid? ? :up : :down
-          }
-
-          order.remaining       -= base_size
-          next_match.remaining  -= base_size
-
-          if next_match.filled?
-            tape << opposite_side.shift.message(:done, reason: :filled)
+          if next_match.expired?
+            tape << opposite_side.shift.message(:done, reason: :expired)
             next_match = opposite_side.first
+
+          else
+            trade_price   = next_match.price
+            base_size   = [next_match.remaining, order.remaining].min
+
+            if order.is_a?(LimitOrder)
+              quote_size = (base_size * trade_price) / (10 ** base_precision)
+
+            elsif order.is_a?(MarketOrder)
+              if order.ask? || (order.remaining_quote_margin > ((trade_price * base_size) / (10 ** base_precision)))
+                quote_size = ((trade_price * base_size) / (10 ** base_precision))
+                order.remaining_quote_margin -= quote_size if order.bid?
+              elsif order.bid?
+                quote_size = order.remaining_quote_margin
+                base_size = (order.remaining_quote_margin * (10 ** base_precision)) / trade_price
+                order.remaining_quote_margin -= quote_size
+              end
+            end
+
+            tape << {
+              type:             :execution,
+              price:            trade_price,
+              base_size:        base_size,
+              quote_size:       quote_size,
+              maker_order_id:   next_match.id.to_s,
+              taker_order_id:   order.id.to_s,
+              time:             Time.now.to_f,
+              tick:             order.bid? ? :up : :down
+            }
+
+            order.remaining       -= base_size
+            next_match.remaining  -= base_size
+
+            if next_match.filled?
+              tape << opposite_side.shift.message(:done, reason: :filled)
+              next_match = opposite_side.first
+            end
           end
         end
 
@@ -105,6 +114,25 @@ module Gekko
       order = received[order_id.to_s]
       dels = order.bid? ? bids.delete(order) : asks.delete(order)
       dels && tape << order.message(:done, reason: :cancelled)
+
+      tick! if (prev_bid != bid) || (prev_ask != ask)
+    end
+
+    #
+    # Removes all expired orders from the book
+    #
+    def remove_expired!
+      prev_bid = bid
+      prev_ask = ask
+
+      [bids, asks].each do |bs|
+        bs.reject! do |order| 
+          if order.expired?
+            tape << order.message(:done, reason: :expired)
+            true
+          end
+        end
+      end
 
       tick! if (prev_bid != bid) || (prev_ask != ask)
     end

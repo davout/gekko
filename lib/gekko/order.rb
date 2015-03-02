@@ -9,7 +9,7 @@ module Gekko
 
     attr_accessor :id, :side, :size, :remaining, :price, :expiration, :created_at
 
-    def initialize(side, id, size, price, expiration = nil)
+    def initialize(side, id, size, expiration = nil)
       @id         = id
       @side       = side && side.to_sym
       @size       = size
@@ -80,6 +80,13 @@ module Gekko
     #
     def fill_or_kill?
       is_a?(Gekko::MarketOrder)
+    end
+
+    #
+    # Returns +true+ if this order is expired
+    #
+    def expired?
+      expiration && (expiration <= Time.now.to_i)
     end
 
   end
