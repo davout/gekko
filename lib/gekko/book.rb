@@ -105,7 +105,7 @@ module Gekko
     #
     # Cancels an order given an ID
     #
-    # @param order_id [String] The ID of the order to cancel
+    # @param order_id [UUID] The ID of the order to cancel
     #
     def cancel(order_id)
       prev_bid = bid

@@ -56,7 +56,8 @@ module Gekko
         side:       side,
         size:       size,
         remaining:  remaining,
-        price:      price
+        price:      price,
+        expiration: expiration
       }.merge(extra_attrs)
     end
 
