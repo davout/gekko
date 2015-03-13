@@ -75,7 +75,6 @@ module Gekko
               quote_size:       quote_size,
               maker_order_id:   next_match.id.to_s,
               taker_order_id:   order.id.to_s,
-              time:             Time.now.to_f,
               tick:             order.bid? ? :up : :down
             }
 

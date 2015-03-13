@@ -5,7 +5,13 @@ module Gekko
   #
   class Tape < Array
 
+    # The number of seconds in 24h
+#    SECONDS_IN_24H = 60 * 60 * 24
+
+SECONDS_IN_24H = 60
+
     attr_accessor :logger, :last_trade_price
+    attr_reader :volume_24h, :high_24h, :low_24h
 
     def initialize(logger = nil)
       @logger           = logger
@@ -21,7 +27,11 @@ module Gekko
     # @param message [Hash] The message to record
     #
     def <<(message)
-      message[:sequence] = length
+      message.merge!({
+        sequence: length,
+        time:     Time.now.to_f
+      })
+
       logger && logger.info(message)
 
       super(message)
@@ -49,30 +59,30 @@ module Gekko
     #
     # @return [Fixnum] The last 24h volume
     #
-    def volume_24h
-      move_24h_cursor!
-      @volume_24h
-    end
+    #def volume_24h
+      #move_24h_cursor!
+     # @volume_24h
+    #end
 
     #
     # Returns the highest trade price that occurred during the last 24h
     #
     # @return [Fixnum] The last 24h high
     #
-    def high_24h
-      move_24h_cursor!
-      @high_24h
-    end
+    #def high_24h
+      #move_24h_cursor!
+     # @high_24h
+    #end
 
     #
     # Returns the lowest trade price that occurred during the last 24h
     #
     # @return [Fixnum] The last 24h low
     #
-    def low_24h
-      move_24h_cursor!
-      @low_24h
-    end
+    #def low_24h
+      #move_24h_cursor!
+     # @low_24h
+    #end
 
     #
     # Recalculates the previous 24h high and low
@@ -87,8 +97,10 @@ module Gekko
       evt         = self[tmp_cursor]
 
       while (evt && (evt[:time] >= time_24h_ago)) do
-        @high_24h = ((@high_24h.nil? || (evt[:price] > @high_24h)) && evt[:price]) || @high_24h
-        @low_24h  = ((@low_24h.nil?  || (evt[:price] < @low_24h))  && evt[:price]) || @low_24h
+        if evt[:type] == :execution
+          @high_24h = ((@high_24h.nil? || (evt[:price] > @high_24h)) && evt[:price]) || @high_24h
+          @low_24h  = ((@low_24h.nil?  || (evt[:price] < @low_24h))  && evt[:price]) || @low_24h
+        end
 
         tmp_cursor -= 1
         evt = (tmp_cursor >= 0) && self[tmp_cursor]
@@ -101,7 +113,7 @@ module Gekko
     # @return [Fixnum] The last 24h quote currency volume
     #
     def quote_volume_24h
-      move_24h_cursor!
+      #move_24h_cursor!
       @quote_volume_24h
     end
 
@@ -136,7 +148,7 @@ module Gekko
     # @return [Float] Yesterday's cut-off timestamp
     #
     def time_24h_ago
-      Time.now.to_f - 24*3600
+      Time.now.to_f - SECONDS_IN_24H
     end
 
     #
@@ -145,7 +157,7 @@ module Gekko
     # passed to Tape#fall_out_of_24h_window  
     #
     def move_24h_cursor!
-      while(self[@cursor_24h] && ((self[@cursor_24h][:type] != :execution) || (self[@cursor_24h][:time] < time_24h_ago)))
+      while(self[@cursor_24h] && (self[@cursor_24h][:time] < time_24h_ago))
         if self[@cursor_24h][:type] == :execution
           fall_out_of_24h_window(self[@cursor_24h])
         end

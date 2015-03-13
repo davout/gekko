@@ -6,6 +6,18 @@ describe Gekko::Book do
     @book = Gekko::Book.new('BTCEUR')
   end
 
+  describe '#dump' do
+    it 'should dump the state of the book as JSON string' do
+      pending
+    end
+  end
+
+  describe '#load' do
+    it 'should load the book and its state from a JSON string' do
+      pending
+    end
+  end
+
   describe '#bid' do
     it 'should be nil when no order is present' do
       expect(@book.bid).to be_nil
