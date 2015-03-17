@@ -1,3 +1,6 @@
+require 'oj'
+Oj.default_options = { mode: :compat }
+
 require 'gekko/book_side'
 require 'gekko/tape'
 require 'gekko/errors'
@@ -12,12 +15,12 @@ module Gekko
     attr_accessor :pair, :bids, :asks, :tape, :received, :base_precision
 
     def initialize(pair, opts = {})
-      self.pair           = pair
-      self.bids           = BookSide.new(:bid)
-      self.asks           = BookSide.new(:ask)
-      self.tape           = Tape.new(opts[:logger])
+      self.pair           = opts[:pair] || pair
+      self.bids           = opts[:bids] || BookSide.new(:bid)
+      self.asks           = opts[:asks] || BookSide.new(:ask)
+      self.tape           = opts[:tape] || Tape.new({ logger: opts[:logger] })
       self.base_precision = opts[:base_precision] || 8
-      self.received       = {}
+      self.received       = opts[:received] || {}
     end
 
     #
@@ -184,6 +187,46 @@ module Gekko
         volume_24h: v24h,
         vwap_24h:   (v24h > 0) && (tape.quote_volume_24h * (10 ** base_precision)/ v24h)
       }
+    end
+
+    #
+    # Dumps the book to a JSON string
+    #
+    # @return [String] The serialized order book
+    #
+    def dump
+      Oj.dump({
+        time:             Time.now.to_f,
+        bids:             bids,
+        asks:             asks,
+        pair:             pair,
+        tape:             tape.to_hash,
+        received:         received,
+        base_precision:   base_precision
+      })
+    end
+
+    #
+    # Loads the book from a JSON string
+    #
+    # @param serialized [String] A serialized book
+    # @return [Gekko::Book] The deserialized book instance
+    #
+    def self.load(serialized)
+      hsh  = symbolize_keys(Oj.load(serialized))
+      hsh[:tape] = Tape.new(symbolize_keys(hsh[:tape]))
+
+      Book.new(hsh)
+    end
+
+    #
+    # Symbolizes keys of a non-nested +Hash+
+    #
+    # @param hsh [Hash] The +Hash+ for which we want to symbolize the keys
+    # @return [Hash] A copy of the parameter with all first-level keys symbolized
+    #
+    def self.symbolize_keys(hsh)
+      hsh.inject({}) { |mem, obj| mem[obj[0].to_sym] = obj[1]; mem }
     end
 
   end

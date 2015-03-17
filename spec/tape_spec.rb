@@ -8,10 +8,12 @@ describe Gekko::Tape do
 
   describe '#next' do
     it 'should return the next unread event' do
+      Timecop.freeze do
       2.times { @tape << {} }
-      expect(@tape.next).to(eql({ sequence: 0 })) 
-      expect(@tape.next).to(eql({ sequence: 1 })) 
+      expect(@tape.next).to(eql({ sequence: 0, time: Time.now.to_f })) 
+      expect(@tape.next).to(eql({ sequence: 1, time: Time.now.to_f })) 
       expect(@tape.next).to be_nil
+      end
     end
   end
 
@@ -27,6 +29,7 @@ describe Gekko::Tape do
       expect { @tape << old_ex }.to change { @tape.volume_24h }.from(0).to(42) 
 
       Timecop.freeze(Time.at(Time.now + 3600 * 25)) do
+        @tape.move_24h_cursor!
         new_ex = { type: :execution, price: 1, base_size: 50, quote_size: 50, time: Time.now.to_f }
         expect { @tape << new_ex }.to change { @tape.volume_24h }.from(0).to(50) 
       end
@@ -39,6 +42,7 @@ describe Gekko::Tape do
       expect { @tape << old_ex }.to change { @tape.high_24h }.from(nil).to(1000) 
 
       Timecop.freeze(Time.at(Time.now + 3600 * 25)) do
+        @tape.move_24h_cursor!
         new_ex = { type: :execution, price: 500, base_size: 50, quote_size: 50, time: Time.now.to_f }
         expect { @tape << new_ex }.to change { @tape.low_24h }.from(nil).to(500) 
       end
@@ -75,10 +79,10 @@ describe Gekko::Tape do
       Timecop.freeze(Time.at(Time.now + 3600 * 12)) do
         new_ex = { type: :execution, price: 750, base_size: 50, quote_size: 50, time: Time.now.to_f }
         expect { @tape << new_ex }.not_to change { @tape.low_24h }
-        expect { Timecop.travel(Time.at(Time.now + 3600 * 13)) }.to change { @tape.low_24h }.from(500).to(750)
+        Timecop.travel(Time.at(Time.now + 3600 * 13)) do 
+          expect { @tape.move_24h_cursor! }.to change { @tape.low_24h }.from(500).to(750)
+        end
       end
-
-      Timecop.return
     end
   end
 

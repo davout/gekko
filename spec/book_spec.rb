@@ -6,18 +6,6 @@ describe Gekko::Book do
     @book = Gekko::Book.new('BTCEUR')
   end
 
-  describe '#dump' do
-    it 'should dump the state of the book as JSON string' do
-      pending
-    end
-  end
-
-  describe '#load' do
-    it 'should load the book and its state from a JSON string' do
-      pending
-    end
-  end
-
   describe '#bid' do
     it 'should be nil when no order is present' do
       expect(@book.bid).to be_nil
@@ -48,6 +36,25 @@ describe Gekko::Book do
         bids: [[1_0000_0000, 500_0000], [1_0000_0000, 400_0000], [1_0000_0000, 300_0000], [1_0000_0000, 200_0000]],
         asks: [[1_0000_0000, 600_0000], [1_0000_0000, 700_0000], [1_0000_0000, 800_0000], [1_0000_0000, 900_0000]]
       })
+    end
+
+    context 'with an execution to serialize' do
+      before do
+        @book.receive_order(Gekko::LimitOrder.new(:ask, random_id, 1_0000_0000, 200_0000))
+      end
+
+      describe '#dump' do
+        it 'should dump the state of the book as JSON string' do
+          expect(@book.dump).to be_a(String)
+        end
+      end
+
+      describe '#load' do
+        it 'should load the book and its state from a JSON string' do
+          prev_ticker = @book.ticker
+          expect(Gekko::Book.load(@book.dump).ticker).to eql(prev_ticker)
+        end
+      end
     end
 
     describe '#receive_order' do

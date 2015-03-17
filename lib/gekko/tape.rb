@@ -6,20 +6,44 @@ module Gekko
   class Tape < Array
 
     # The number of seconds in 24h
-#    SECONDS_IN_24H = 60 * 60 * 24
-
-SECONDS_IN_24H = 60
+    SECONDS_IN_24H = 60 * 60 * 24
 
     attr_accessor :logger, :last_trade_price
     attr_reader :volume_24h, :high_24h, :low_24h
 
-    def initialize(logger = nil)
-      @logger           = logger
-      @cursor           = 0
-      @cursor_24h       = 0
-      @volume_24h       = 0
-      @quote_volume_24h = 0
+    def initialize(opts = {})
+      @logger           = opts[:logger]
+
+      @cursor           = opts[:cursor]           || 0
+      @cursor_24h       = opts[:cursor_24h]       || 0
+      @volume_24h       = opts[:volume_24h]       || 0
+      @quote_volume_24h = opts[:quote_volume_24h] || 0
+
+      @low_24h          = opts[:low_24h]
+      @high_24h         = opts[:high_24h]
+      @last_trade_price = opts[:last_trade_price]
+
+      opts[:events] && opts[:events].each_with_index { |obj, idx| self[idx] = obj }
     end
+
+    #
+    # Returns this +Tape+ object as a +Hash+ for the purpose of serialization
+    #
+    # @return [Hash] The JSON-friendly +Hash+ representation
+    #
+    def to_hash
+      {
+        cursor:             @cursor,
+        cursor_24h:         @cursor_24h,
+        volume_24h:         @volume_24h,
+        high_24h:           @high_24h,
+        low_24h:            @low_24h,
+        quote_volume_24h:   @quote_volume_24h,
+        last_trade_price:   @last_trade_price,
+        events:             self
+      }
+    end
+
 
     #
     # Prints a message on the tape
