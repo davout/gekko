@@ -9,9 +9,20 @@ module Gekko
 
     attr_accessor :side
 
-    def initialize(side)
+    def initialize(side, opts = {})
       raise "Incorrect side <#{side}>" unless [:bid, :ask].include?(side)
       @side = side
+
+      opts[:orders] && opts[:orders].each_with_index { |obj, idx| self[idx] = Order.load(obj) }
+    end
+
+    #
+    # Returns a +Hash+ representation of this +BookSide+ instance
+    #
+    # @return [Hash] The serializable representation
+    #
+    def to_hash
+      map(&:to_hash)
     end
 
     #

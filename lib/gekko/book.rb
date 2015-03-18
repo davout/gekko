@@ -197,8 +197,8 @@ module Gekko
     def dump
       Oj.dump({
         time:             Time.now.to_f,
-        bids:             bids,
-        asks:             asks,
+        bids:             bids.to_hash,
+        asks:             asks.to_hash,
         pair:             pair,
         tape:             tape.to_hash,
         received:         received,
@@ -214,9 +214,12 @@ module Gekko
     #
     def self.load(serialized)
       hsh  = symbolize_keys(Oj.load(serialized))
-      hsh[:tape] = Tape.new(symbolize_keys(hsh[:tape]))
 
-      Book.new(hsh)
+      hsh[:tape] = Tape.new(symbolize_keys(hsh[:tape]))
+      hsh[:bids] = BookSide.new(:bid, orders: hsh[:bids].map { |o| symbolize_keys(o) })
+      hsh[:asks] = BookSide.new(:ask, orders: hsh[:asks].map { |o| symbolize_keys(o) })
+
+      Book.new(hsh[:pair], hsh)
     end
 
     #

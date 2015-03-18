@@ -24,6 +24,36 @@ module Gekko
       raise 'The order creation timestamp can''t be nil'  if !@created_at
     end
 
+
+    #
+    # Loads an +Order+ from a +Hash+. Only limit orders are supported as market
+    # orders should never need to get serialized
+    #
+    # @return [LimitOrder] The unserialized order
+    #
+    def self.load(hsh)
+      order = LimitOrder.new(hsh[:side], UUID.parse(hsh[:id]), hsh[:size], hsh[:price], hsh[:expiration])
+      order.created_at = hsh[:created_at]
+      order
+    end
+
+    #
+    # Returns a +Hash+ representation of this +Order+ instance
+    #
+    # @return [Hash] The serializable representation
+    #
+    def to_hash
+      {
+        id:           @id,
+        side:         @side,
+        size:         @size,
+        price:        @price,
+        remaining:    @remaining,
+        expiration:   @expiration,
+        created_at:   @created_at
+      }
+    end
+
     #
     # Returns +true+ if this order can execute against +limit_order+
     #
