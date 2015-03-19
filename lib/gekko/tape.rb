@@ -79,36 +79,6 @@ module Gekko
     end
 
     #
-    # Returns the traded volume for the last 24h
-    #
-    # @return [Fixnum] The last 24h volume
-    #
-    #def volume_24h
-      #move_24h_cursor!
-     # @volume_24h
-    #end
-
-    #
-    # Returns the highest trade price that occurred during the last 24h
-    #
-    # @return [Fixnum] The last 24h high
-    #
-    #def high_24h
-      #move_24h_cursor!
-     # @high_24h
-    #end
-
-    #
-    # Returns the lowest trade price that occurred during the last 24h
-    #
-    # @return [Fixnum] The last 24h low
-    #
-    #def low_24h
-      #move_24h_cursor!
-     # @low_24h
-    #end
-
-    #
     # Recalculates the previous 24h high and low
     #
     def recalc_high_low_24h!
