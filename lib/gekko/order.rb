@@ -44,7 +44,7 @@ module Gekko
     #
     def to_hash
       {
-        id:           @id,
+        id:           @id.to_s,
         side:         @side,
         size:         @size,
         price:        @price,
