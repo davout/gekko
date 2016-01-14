@@ -27,12 +27,11 @@ module Gekko
     end
 
     #
-    # Receives an order and executes it 
+    # Receives an order and executes it
     #
     # @param order [Order] The order to execute
     #
     def receive_order(order)
-
       raise 'Order must be a Gekko::LimitOrder or a Gekko::MarketOrder' unless [LimitOrder, MarketOrder].include?(order.class)
 
       if received.has_key?(order.id.to_s)
