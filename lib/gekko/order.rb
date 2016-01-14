@@ -1,3 +1,5 @@
+require 'gekko/serialization'
+
 module Gekko
 
   #
@@ -6,6 +8,8 @@ module Gekko
   # expiration timestamp.
   #
   class Order
+
+    include Gekko::Serialization
 
     attr_accessor :id, :side, :size, :remaining, :price, :expiration, :created_at
 
@@ -22,36 +26,6 @@ module Gekko
       raise 'Size must be a positive integer'             if (@size && (!@size.is_a?(Fixnum) || @size <= 0))
       raise 'Expiration must be omitted or be an integer' unless (@expiration.nil? || (@expiration.is_a?(Fixnum) && @expiration > 0))
       raise 'The order creation timestamp can''t be nil'  if !@created_at
-    end
-
-
-    #
-    # Loads an +Order+ from a +Hash+. Only limit orders are supported as market
-    # orders should never need to get serialized
-    #
-    # @return [LimitOrder] The unserialized order
-    #
-    def self.load(hsh)
-      order = LimitOrder.new(hsh[:side], UUID.parse(hsh[:id]), hsh[:size], hsh[:price], hsh[:expiration])
-      order.created_at = hsh[:created_at]
-      order
-    end
-
-    #
-    # Returns a +Hash+ representation of this +Order+ instance
-    #
-    # @return [Hash] The serializable representation
-    #
-    def to_hash
-      {
-        id:           @id.to_s,
-        side:         @side,
-        size:         @size,
-        price:        @price,
-        remaining:    @remaining,
-        expiration:   @expiration,
-        created_at:   @created_at
-      }
     end
 
     #

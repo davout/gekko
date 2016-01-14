@@ -13,7 +13,7 @@ module Gekko
       raise "Incorrect side <#{side}>" unless [:bid, :ask].include?(side)
       @side = side
 
-      opts[:orders] && opts[:orders].each_with_index { |obj, idx| self[idx] = Order.load(obj) }
+      opts[:orders] && opts[:orders].each_with_index { |obj, idx| self[idx] = Order.from_hash(obj) }
     end
 
     #

@@ -8,10 +8,12 @@ module Gekko
 
     attr_accessor :quote_margin, :remaining_quote_margin
 
-    def initialize(side, id, size, quote_margin, expiration = nil)
-      super(side, id, size, expiration)
+    def initialize(side, id, size, quote_margin)
+      super(side, id, size)
+
       @quote_margin           = quote_margin
       @remaining_quote_margin = @quote_margin
+
       raise 'Quote currency margin must be provided for a market bid'     if quote_margin.nil? && bid?
       raise 'Quote currency margin can not be specified for a market ask' if quote_margin && ask?
     end

@@ -4,6 +4,7 @@ Oj.default_options = { mode: :compat }
 require 'gekko/book_side'
 require 'gekko/tape'
 require 'gekko/errors'
+require 'gekko/symbolize_keys'
 
 module Gekko
 
@@ -11,6 +12,8 @@ module Gekko
   # An order book consisting of a bid side and an ask side
   #
   class Book
+
+    extend SymbolizeKeys
 
     attr_accessor :pair, :bids, :asks, :tape, :received, :base_precision
 
@@ -220,16 +223,6 @@ module Gekko
       hsh[:asks] = BookSide.new(:ask, orders: hsh[:asks].map { |o| symbolize_keys(o) })
 
       Book.new(hsh[:pair], hsh)
-    end
-
-    #
-    # Symbolizes keys of a non-nested +Hash+
-    #
-    # @param hsh [Hash] The +Hash+ for which we want to symbolize the keys
-    # @return [Hash] A copy of the parameter with all first-level keys symbolized
-    #
-    def self.symbolize_keys(hsh)
-      hsh.inject({}) { |mem, obj| mem[obj[0].to_sym] = obj[1]; mem }
     end
 
   end
