@@ -117,7 +117,7 @@ module Gekko
 
       order = received[order_id.to_s]
       dels = order.bid? ? bids.delete(order) : asks.delete(order)
-      dels && tape << order.message(:done, reason: :cancelled)
+      dels && tape << order.message(:done, reason: :canceled)
 
       tick! if (prev_bid != bid) || (prev_ask != ask)
     end

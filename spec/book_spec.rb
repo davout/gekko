@@ -198,15 +198,15 @@ describe Gekko::Book do
         expect { @book.cancel(@second_bid_oid) }.not_to change { @book.bid }
       end
 
-      it 'should emit a done message with the cancelled reason' do
+      it 'should emit a done message with the canceled reason' do
         @book.cancel(@second_bid_oid)
-        expect(@book.tape.last).to include({ type: :done, reason: :cancelled, order_id: @second_bid_oid.to_s })
+        expect(@book.tape.last).to include({ type: :done, reason: :canceled, order_id: @second_bid_oid.to_s })
       end
 
       it 'should emit a ticker message if the bid or ask is changed' do
         @book.cancel(@best_bid_oid)
         expect(@book.tape.last).to include({ type: :ticker, bid: 400_0000 })
-        expect(@book.tape[@book.tape.length - 2]).to include({ type: :done, reason: :cancelled })
+        expect(@book.tape[@book.tape.length - 2]).to include({ type: :done, reason: :canceled })
       end
     end
   end
