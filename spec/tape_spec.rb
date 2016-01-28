@@ -9,10 +9,10 @@ describe Gekko::Tape do
   describe '#next' do
     it 'should return the next unread event' do
       Timecop.freeze do
-      2.times { @tape << {} }
-      expect(@tape.next).to(eql({ sequence: 0, time: Time.now.to_f })) 
-      expect(@tape.next).to(eql({ sequence: 1, time: Time.now.to_f })) 
-      expect(@tape.next).to be_nil
+        2.times { @tape << {} }
+        expect(@tape.next).to(eql({ sequence: 0, time: Time.now.to_f })) 
+        expect(@tape.next).to(eql({ sequence: 1, time: Time.now.to_f })) 
+        expect(@tape.next).to be_nil
       end
     end
   end
@@ -86,5 +86,40 @@ describe Gekko::Tape do
     end
   end
 
+  describe '#open_24h' do
+    it 'should ignore recent trades and report first trade older than 24h as open price' do
+      old_ex = { type: :execution, price: 500, base_size: 42, quote_size: 42, time: Time.now.to_f }
+      expect { @tape << old_ex }.to_not change { @tape.open_24h }
+
+      Timecop.freeze(Time.at(Time.now + 3600 * 48)) do
+        new_ex = { type: :execution, price: 750, base_size: 50, quote_size: 50, time: Time.now.to_f }
+        expect { @tape << new_ex }.to change { @tape.open_24h }.from(nil).to(500)
+
+        Timecop.travel(Time.at(Time.now + 3600 * 96)) do
+          expect { @tape.move_24h_cursor! }.to change { @tape.open_24h }.from(500).to(750)
+        end
+      end
+    end
+  end
+
+  describe '#var_24h' do
+    it 'should not report unless open_24h is set' do
+      expect(@tape.var_24h).to be_nil
+    end
+
+    it 'should correctly report variation since the open' do
+      old_ex = { type: :execution, price: 500, base_size: 42, quote_size: 42, time: Time.now.to_f }
+      expect { @tape << old_ex }.to_not change { @tape.var_24h }
+
+      Timecop.freeze(Time.at(Time.now + 3600 * 48)) do
+        new_ex = { type: :execution, price: 750, base_size: 50, quote_size: 50, time: Time.now.to_f }
+        expect { @tape << new_ex }.to change { @tape.var_24h }.from(nil).to(0.5)
+
+        Timecop.travel(Time.at(Time.now + 3600 * 96)) do
+          expect { @tape.move_24h_cursor! }.to change { @tape.var_24h }.from(0.5).to(0)
+        end
+      end
+    end
+  end
 end
 

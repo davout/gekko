@@ -9,7 +9,7 @@ module Gekko
     SECONDS_IN_24H = 60 * 60 * 24
 
     attr_accessor :logger, :last_trade_price
-    attr_reader :volume_24h, :high_24h, :low_24h
+    attr_reader :volume_24h, :high_24h, :low_24h, :open_24h, :var_24h
 
     def initialize(opts = {})
       @logger           = opts[:logger]
@@ -21,7 +21,9 @@ module Gekko
 
       @low_24h          = opts[:low_24h]
       @high_24h         = opts[:high_24h]
+      @open_24h         = opts[:open_24h]
       @last_trade_price = opts[:last_trade_price]
+      @var_24h          = opts[:var_24h] || (@last_trade_price && @open_24h && ((@last_trade_price - @open_24h) / @open_24h))
 
       opts[:events] && opts[:events].each_with_index { |obj, idx| self[idx] = obj }
     end
@@ -38,12 +40,13 @@ module Gekko
         volume_24h:         @volume_24h,
         high_24h:           @high_24h,
         low_24h:            @low_24h,
+        open_24h:           @open_24h,
+        var_24h:            @var_24h,
         quote_volume_24h:   @quote_volume_24h,
         last_trade_price:   @last_trade_price,
         events:             self
       }
     end
-
 
     #
     # Prints a message on the tape
@@ -107,7 +110,6 @@ module Gekko
     # @return [Fixnum] The last 24h quote currency volume
     #
     def quote_volume_24h
-      #move_24h_cursor!
       @quote_volume_24h
     end
 
@@ -148,7 +150,7 @@ module Gekko
     #
     # Moves the cursor pointing to the first trade that happened during
     # the last 24h. Every execution getting out of the 24h rolling window is
-    # passed to Tape#fall_out_of_24h_window  
+    # passed to Tape#fall_out_of_24h_window
     #
     def move_24h_cursor!
       while(self[@cursor_24h] && (self[@cursor_24h][:time] < time_24h_ago))
@@ -163,10 +165,12 @@ module Gekko
     #
     # Updates the low, high, and volumes when an execution falls out of the rolling
     # previous 24h window
-    # 
+    #
     def fall_out_of_24h_window(execution)
       @volume_24h       -= execution[:base_size]
       @quote_volume_24h -= execution[:quote_size]
+      @open_24h         = execution[:price]
+      @var_24h          = @last_trade_price && ((@last_trade_price - @open_24h) / @open_24h.to_f)
 
       if [@high_24h, @low_24h].include?(execution[:price])
         recalc_high_low_24h!
