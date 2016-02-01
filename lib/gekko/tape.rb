@@ -5,6 +5,8 @@ module Gekko
   #
   class Tape < Array
 
+    include Serialization
+
     # The number of seconds in 24h
     SECONDS_IN_24H = 60 * 60 * 24
 
@@ -12,40 +14,12 @@ module Gekko
     attr_reader :volume_24h, :high_24h, :low_24h, :open_24h, :var_24h
 
     def initialize(opts = {})
-      @logger           = opts[:logger]
+      @logger = opts[:logger]
 
-      @cursor           = opts[:cursor]           || 0
-      @cursor_24h       = opts[:cursor_24h]       || 0
-      @volume_24h       = opts[:volume_24h]       || 0
-      @quote_volume_24h = opts[:quote_volume_24h] || 0
-
-      @low_24h          = opts[:low_24h]
-      @high_24h         = opts[:high_24h]
-      @open_24h         = opts[:open_24h]
-      @last_trade_price = opts[:last_trade_price]
-      @var_24h          = opts[:var_24h] || (@last_trade_price && @open_24h && ((@last_trade_price - @open_24h) / @open_24h))
-
-      opts[:events] && opts[:events].each_with_index { |obj, idx| self[idx] = obj }
-    end
-
-    #
-    # Returns this +Tape+ object as a +Hash+ for the purpose of serialization
-    #
-    # @return [Hash] The JSON-friendly +Hash+ representation
-    #
-    def to_hash
-      {
-        cursor:             @cursor,
-        cursor_24h:         @cursor_24h,
-        volume_24h:         @volume_24h,
-        high_24h:           @high_24h,
-        low_24h:            @low_24h,
-        open_24h:           @open_24h,
-        var_24h:            @var_24h,
-        quote_volume_24h:   @quote_volume_24h,
-        last_trade_price:   @last_trade_price,
-        events:             self
-      }
+      @cursor           = 0
+      @cursor_24h       = 0
+      @volume_24h       = 0
+      @quote_volume_24h = 0
     end
 
     #
@@ -176,6 +150,50 @@ module Gekko
         recalc_high_low_24h!
       end
     end
+
+    #
+    # Returns this +Tape+ object as a +Hash+ for the purpose of serialization
+    #
+    # @return [Hash] The JSON-friendly +Hash+ representation
+    #
+    def to_hash
+      {
+        cursor:             @cursor,
+        cursor_24h:         @cursor_24h,
+        volume_24h:         @volume_24h,
+        high_24h:           @high_24h,
+        low_24h:            @low_24h,
+        open_24h:           @open_24h,
+        var_24h:            @var_24h,
+        quote_volume_24h:   @quote_volume_24h,
+        last_trade_price:   @last_trade_price,
+        events:             self
+      }
+    end
+
+    #
+    # Loads a +Tape+ object from a hash
+    #
+    # @param hsh [Hash] The +Tape+ data
+    #
+    def self.from_hash(hsh)
+      tape = Tape.new
+
+      tape.cursor           = 0
+      tape.cursor_24h       = 0
+      tape.volume_24h       = 0
+      tape.quote_volume_24h = 0
+
+      #@var_24h = opts[:var_24h] || (@last_trade_price && @open_24h && ((@last_trade_price - @open_24h) / @open_24h))
+
+      #opts[:events] && opts[:events].each_with_index { |obj, idx| self[idx] = obj }
+
+      hsh.events.each { |evt| tape << evt }
+
+      tape.update_ticker
+      tape
+    end
+
   end
 end
 

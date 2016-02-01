@@ -1,10 +1,6 @@
-require 'oj'
-Oj.default_options = { mode: :compat }
-
 require 'gekko/book_side'
 require 'gekko/tape'
 require 'gekko/errors'
-require 'gekko/symbolize_keys'
 
 module Gekko
 
@@ -13,7 +9,7 @@ module Gekko
   #
   class Book
 
-    extend SymbolizeKeys
+    include Serialization
 
     attr_accessor :pair, :bids, :asks, :tape, :received, :base_precision
 
@@ -194,12 +190,12 @@ module Gekko
     end
 
     #
-    # Dumps the book to a JSON string
+    # Returns a +Hash+ representation of this +Book+ instance
     #
-    # @return [String] The serialized order book
+    # @return [Hash] The serializable representation
     #
-    def dump
-      Oj.dump({
+    def to_hash
+      {
         time:             Time.now.to_f,
         bids:             bids.to_hash,
         asks:             asks.to_hash,
@@ -207,18 +203,16 @@ module Gekko
         tape:             tape.to_hash,
         received:         received,
         base_precision:   base_precision
-      })
+      }
     end
 
     #
-    # Loads the book from a JSON string
+    # Loads the book from a hash
     #
-    # @param serialized [String] A serialized book
-    # @return [Gekko::Book] The deserialized book instance
+    # @param hsh [Hash] A Book hash
+    # @return [Gekko::Book] The loaded book instance
     #
-    def self.load(serialized)
-      hsh  = symbolize_keys(Oj.load(serialized))
-
+    def self.from_hash(hsh)
       hsh[:tape] = Tape.new(symbolize_keys(hsh[:tape]))
       hsh[:bids] = BookSide.new(:bid, orders: hsh[:bids].map { |o| symbolize_keys(o) })
       hsh[:asks] = BookSide.new(:ask, orders: hsh[:asks].map { |o| symbolize_keys(o) })

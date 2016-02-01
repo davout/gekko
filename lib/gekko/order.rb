@@ -1,5 +1,3 @@
-require 'gekko/serialization'
-
 module Gekko
 
   #
@@ -9,7 +7,7 @@ module Gekko
   #
   class Order
 
-    include Gekko::Serialization
+    include Serialization
 
     attr_accessor :id, :side, :size, :remaining, :price, :expiration, :created_at
 
@@ -92,6 +90,48 @@ module Gekko
     #
     def expired?
       expiration && (expiration <= Time.now.to_i)
+    end
+
+    #
+    # Returns a +Hash+ representation of this +Order+ instance
+    #
+    # @return [Hash] The serializable representation
+    #
+    def to_hash
+      hsh = {
+        id:           id.to_s,
+        side:         side,
+        size:         size,
+        price:        price,
+        remaining:    remaining,
+        expiration:   expiration,
+        created_at:   created_at
+      }
+
+      if is_a?(Gekko::MarketOrder)
+        hsh.delete(:price)
+        hsh[:quote_margin] = quote_margin
+        hsh[:remaining_quote_margin] = remaining_quote_margin
+      end
+
+      hsh
+    end
+
+    #
+    # Initializes a +Gekko::Order+ subclass from a +Hash+ instance
+    #
+    # @param hsh [Hash] The order data
+    # @return [Gekko::Order] A trade order
+    #
+    def self.from_hash(hsh)
+      order = if hsh[:price]
+                LimitOrder.new(hsh[:side], UUID.parse(hsh[:id]), hsh[:size], hsh[:price], hsh[:expiration])
+              else
+                MarketOrder.new(hsh[:side], UUID.parse(hsh[:id]), hsh[:size], hsh[:quote_margin])
+              end
+
+      order.created_at = hsh[:created_at] if hsh[:created_at]
+      order
     end
 
   end

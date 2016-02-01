@@ -45,14 +45,15 @@ describe Gekko::Book do
 
       describe '#dump' do
         it 'should dump the state of the book as JSON string' do
-          expect(@book.dump).to be_a(String)
+          expect(@book.serialize).to be_a(String)
         end
       end
 
       describe '#load' do
         it 'should load the book and its state from a JSON string' do
           prev_ticker = @book.ticker
-          expect(Gekko::Book.load(@book.dump).ticker).to eql(prev_ticker)
+          binding.pry
+          expect(Gekko::Book.deserialize(@book.serialize).ticker).to eql(prev_ticker)
         end
       end
     end
