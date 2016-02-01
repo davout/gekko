@@ -187,7 +187,9 @@ module Gekko
         low_24h:    tape.low_24h,
         spread:     spread,
         volume_24h: v24h,
-        vwap_24h:   (v24h > 0) && (tape.quote_volume_24h * (10 ** base_precision)/ v24h)
+
+        # We'd like to return +nil+, not +false+ when we don't have any volume
+        vwap_24h:   ((v24h > 0) && (tape.quote_volume_24h * (10 ** base_precision)/ v24h)) || nil
       }
     end
 
