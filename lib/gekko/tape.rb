@@ -179,18 +179,12 @@ module Gekko
     def self.from_hash(hsh)
       tape = Tape.new
 
-      tape.cursor           = 0
-      tape.cursor_24h       = 0
-      tape.volume_24h       = 0
-      tape.quote_volume_24h = 0
+      hsh[:events].each do |evt|
+        e = symbolize_keys(evt)
+        e[:type] = e[:type].to_sym
+        tape << e
+      end
 
-      #@var_24h = opts[:var_24h] || (@last_trade_price && @open_24h && ((@last_trade_price - @open_24h) / @open_24h))
-
-      #opts[:events] && opts[:events].each_with_index { |obj, idx| self[idx] = obj }
-
-      hsh.events.each { |evt| tape << evt }
-
-      tape.update_ticker
       tape
     end
 

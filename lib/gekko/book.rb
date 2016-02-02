@@ -213,11 +213,14 @@ module Gekko
     # @return [Gekko::Book] The loaded book instance
     #
     def self.from_hash(hsh)
-      hsh[:tape] = Tape.new(symbolize_keys(hsh[:tape]))
-      hsh[:bids] = BookSide.new(:bid, orders: hsh[:bids].map { |o| symbolize_keys(o) })
-      hsh[:asks] = BookSide.new(:ask, orders: hsh[:asks].map { |o| symbolize_keys(o) })
+      book = Book.new(hsh[:pair], {
+        bids: BookSide.new(:bid, orders: hsh[:bids].map { |o| symbolize_keys(o) }),
+        asks: BookSide.new(:ask, orders: hsh[:asks].map { |o| symbolize_keys(o) }),
+      })
 
-      Book.new(hsh[:pair], hsh)
+      book.tape = Tape.from_hash(symbolize_keys(hsh[:tape]))
+
+      book
     end
 
   end

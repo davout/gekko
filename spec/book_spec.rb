@@ -52,7 +52,6 @@ describe Gekko::Book do
       describe '#load' do
         it 'should load the book and its state from a JSON string' do
           prev_ticker = @book.ticker
-          binding.pry
           expect(Gekko::Book.deserialize(@book.serialize).ticker).to eql(prev_ticker)
         end
       end
