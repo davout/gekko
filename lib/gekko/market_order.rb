@@ -8,8 +8,8 @@ module Gekko
 
     attr_accessor :quote_margin, :remaining_quote_margin
 
-    def initialize(side, id, size, quote_margin)
-      super(side, id, size)
+    def initialize(side, id, size, quote_margin, expiration = nil)
+      super(side, id, size, expiration)
 
       @quote_margin           = quote_margin
       @remaining_quote_margin = @quote_margin
