@@ -8,4 +8,4 @@ describe Gekko::BookSide do
     end
   end
 
-end 
+end

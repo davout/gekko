@@ -10,6 +10,7 @@ module Gekko
     attr_accessor :side
 
     def initialize(side, opts = {})
+      # TODO "WARNING: Sort orders ?"
       raise "Incorrect side <#{side}>" unless [:bid, :ask].include?(side)
       @side = side
 

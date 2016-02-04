@@ -52,7 +52,7 @@ module Gekko
     # @return [Hash] The message we'll print on the tape
     #
     def message(type, extra_attrs = {})
-      {
+      hsh = {
         type:       type,
         order_id:   id.to_s,
         side:       side,
@@ -61,6 +61,14 @@ module Gekko
         price:      price,
         expiration: expiration
       }.merge(extra_attrs)
+
+      if is_a?(Gekko::MarketOrder)
+        hsh.delete(:price)
+        hsh[:quote_margin] = quote_margin
+        hsh[:remaining_quote_margin] = remaining_quote_margin
+      end
+
+      hsh
     end
 
     #

@@ -52,19 +52,30 @@ module Gekko
             next_match = opposite_side.first
 
           else
-            trade_price   = next_match.price
-            base_size   = [next_match.remaining, order.remaining].min
+            trade_price     = next_match.price
+            max_quote_size  = nil
+
+            if order.is_a?(MarketOrder)
+              max_quote_size = order.remaining_quote_margin && ((order.remaining_quote_margin * (10 ** base_precision)).to_f / trade_price).round
+            end
+
+            base_size = [
+              next_match.remaining,
+              order.remaining,
+              max_quote_size
+            ].compact.min
 
             if order.is_a?(LimitOrder)
               quote_size = (base_size * trade_price) / (10 ** base_precision)
 
             elsif order.is_a?(MarketOrder)
               if order.ask? || (order.remaining_quote_margin > ((trade_price * base_size) / (10 ** base_precision)))
-                quote_size = ((trade_price * base_size) / (10 ** base_precision))
-                order.remaining_quote_margin -= quote_size if order.bid?
+                quote_size = ((trade_price * base_size).to_f / (10 ** base_precision)).round
+                order.remaining_quote_margin -= quote_size if order.quote_margin
+
               elsif order.bid?
                 quote_size = order.remaining_quote_margin
-                base_size = (order.remaining_quote_margin * (10 ** base_precision)) / trade_price
+                base_size = ((order.remaining_quote_margin * (10 ** base_precision)).to_f / trade_price).round
                 order.remaining_quote_margin -= quote_size
               end
             end
@@ -79,7 +90,7 @@ module Gekko
               tick:             order.bid? ? :up : :down
             }
 
-            order.remaining       -= base_size
+            order.remaining       -= base_size if order.remaining
             next_match.remaining  -= base_size
 
             if next_match.filled?
@@ -218,7 +229,8 @@ module Gekko
         asks: BookSide.new(:ask, orders: hsh[:asks].map { |o| symbolize_keys(o) }),
       })
 
-      book.tape = Tape.from_hash(symbolize_keys(hsh[:tape]))
+      # TODO "populate received, sort orders, populate tape, and re-force tape?"
+      book.tape = Tape.from_hash(symbolize_keys(hsh[:tape])) if hsh[:tape]
 
       book
     end

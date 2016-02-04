@@ -10,6 +10,7 @@ module Gekko
     def initialize(side, id, size, price, expiration = nil)
       super(side, id, size, expiration)
       @price = price
+
       raise 'Price must be a positive integer' if @price.nil? || (!@price.is_a?(Fixnum) || (@price <= 0))
     end
 
