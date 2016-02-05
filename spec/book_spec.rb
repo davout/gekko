@@ -54,6 +54,24 @@ describe Gekko::Book do
           prev_ticker = @book.ticker
           expect(Gekko::Book.deserialize(@book.serialize).ticker).to eql(prev_ticker)
         end
+
+        it 'should accept unsorted orders and sort them before loading them' do
+          Timecop.freeze do
+            bogus_book = Oj.load(@book.serialize)
+            bogus_book['bids'].reverse!
+            bogus_book['asks'].reverse!
+
+            reserialized_bogus = Oj.load(Gekko::Book.deserialize(bogus_book.to_json).serialize)
+            serialized_normal = Oj.load(@book.serialize)
+
+            %w{ tape received }.each { |i| [reserialized_bogus, serialized_normal].each { |h| h.delete(i) } }
+
+            reserialized_bogus = Oj.dump(reserialized_bogus)
+            serialized_normal = Oj.dump(serialized_normal)
+
+            expect(reserialized_bogus).to eql(serialized_normal)
+          end
+        end
       end
     end
 

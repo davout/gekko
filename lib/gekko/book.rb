@@ -11,7 +11,7 @@ module Gekko
 
     include Serialization
 
-    attr_accessor :pair, :bids, :asks, :tape, :received, :base_precision
+    attr_accessor :pair, :bids, :asks, :tape, :received, :base_precision, :multiplier
 
     def initialize(pair, opts = {})
       self.pair           = opts[:pair] || pair
@@ -19,6 +19,7 @@ module Gekko
       self.asks           = opts[:asks] || BookSide.new(:ask)
       self.tape           = opts[:tape] || Tape.new({ logger: opts[:logger] })
       self.base_precision = opts[:base_precision] || 8
+      self.multiplier     = BigDecimal(10 ** base_precision)
       self.received       = opts[:received] || {}
     end
 
@@ -56,27 +57,26 @@ module Gekko
             max_quote_size  = nil
 
             if order.is_a?(MarketOrder)
-              max_quote_size = order.remaining_quote_margin && ((order.remaining_quote_margin * (10 ** base_precision)).to_f / trade_price).round
+              max_size_possible_with_quote_margin = order.remaining_quote_margin && (order.remaining_quote_margin * multiplier / trade_price).round
             end
 
             base_size = [
               next_match.remaining,
               order.remaining,
-              max_quote_size
+              max_size_possible_with_quote_margin
             ].compact.min
 
             if order.is_a?(LimitOrder)
-              quote_size = (base_size * trade_price) / (10 ** base_precision)
+              quote_size = (base_size * trade_price) / multiplier
 
             elsif order.is_a?(MarketOrder)
-              if order.ask? || (order.remaining_quote_margin > ((trade_price * base_size) / (10 ** base_precision)))
-                quote_size = ((trade_price * base_size).to_f / (10 ** base_precision)).round
+              if order.ask? || (order.remaining_quote_margin > (trade_price * base_size / multiplier))
+                quote_size = (trade_price * base_size / multiplier).round
                 order.remaining_quote_margin -= quote_size if order.quote_margin
 
               elsif order.bid?
                 quote_size = order.remaining_quote_margin
-                base_size = ((order.remaining_quote_margin * (10 ** base_precision)).to_f / trade_price).round
-                order.remaining_quote_margin -= quote_size
+                order.remaining_quote_margin = 0
               end
             end
 
@@ -196,7 +196,7 @@ module Gekko
         volume_24h: v24h,
 
         # We'd like to return +nil+, not +false+ when we don't have any volume
-        vwap_24h:   ((v24h > 0) && (tape.quote_volume_24h * (10 ** base_precision)/ v24h)) || nil
+        vwap_24h:   ((v24h > 0) && (tape.quote_volume_24h * multiplier / v24h).to_i) || nil
       }
     end
 
@@ -225,11 +225,10 @@ module Gekko
     #
     def self.from_hash(hsh)
       book = Book.new(hsh[:pair], {
-        bids: BookSide.new(:bid, orders: hsh[:bids].map { |o| symbolize_keys(o) }),
-        asks: BookSide.new(:ask, orders: hsh[:asks].map { |o| symbolize_keys(o) }),
+        bids: BookSide.new(:bid, orders: hsh[:bids].map { |o| symbolize_keys(o) }.sort { |a, b| b[:price] <=> a[:price] }),
+        asks: BookSide.new(:ask, orders: hsh[:asks].map { |o| symbolize_keys(o) }.sort { |a, b| a[:price] <=> b[:price] }),
       })
 
-      # TODO "populate received, sort orders, populate tape, and re-force tape?"
       book.tape = Tape.from_hash(symbolize_keys(hsh[:tape])) if hsh[:tape]
 
       book
