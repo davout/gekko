@@ -1,4 +1,4 @@
-require_relative './spec_helper'
+require_relative '../spec_helper'
 
 describe Gekko::Book do
 
@@ -15,6 +15,19 @@ describe Gekko::Book do
       @book.receive_order(Gekko::LimitOrder.new(:bid, random_id, 1_0000_0000, 100_0000))
       @book.receive_order(Gekko::LimitOrder.new(:bid, random_id, 1_0000_0000, 200_0000))
       expect(@book.bid).to eql(200_0000)
+    end
+  end
+
+  describe '#execute_trade' do
+    it 'should not overflow precision' do
+      maker = Gekko::LimitOrder.new(:ask, random_id, 1_0000_0000, 445_0000_0000)
+      taker = Gekko::MarketOrder.new(:bid, random_id, nil, 5000_0000)
+
+      @book.execute_trade(maker, taker)
+
+      expect taker.filled?
+      expect(taker.remaining_quote_margin).to eql(245)
+      expect(taker.max_precision)
     end
   end
 
@@ -146,11 +159,11 @@ describe Gekko::Book do
           @book.receive_order(order)
           expect(order.done?).to be_truthy
           expect(order.filled?).to be_truthy
-          expect(order.remaining).to eql(97_6666_6667)
+          expect(order.remaining).to eql(97_6666_6666)
           expect(@book.bid).to eql(300_0000)
-          expect(@book.bids.first.remaining).to eql(6666_6667)
+          expect(@book.bids.first.remaining).to eql(6666_6666)
           expect(@book.ticker[:last]).to eql(300_0000)
-          expect(@book.ticker[:volume_24h]).to eql(2_3333_3333)
+          expect(@book.ticker[:volume_24h]).to eql(2_3333_3334)
           @book.tape.delete_at(@book.tape.length - 1)
           expect(@book.tape.last[:reason]).to eql(:filled)
         end
@@ -177,10 +190,10 @@ describe Gekko::Book do
           expect(order.done?).to be_truthy
           expect(order.filled?).to be_truthy
           expect(order.remaining_quote_margin).to be_zero
-          expect(order.remaining).to eql(3333_3333)
+          expect(order.remaining).to eql(3333_3334)
           expect(@book.ask).to eql(600_0000)
           expect(@book.ticker[:last]).to eql(600_0000)
-          expect(@book.ticker[:volume_24h]).to eql(6666_6667)
+          expect(@book.ticker[:volume_24h]).to eql(6666_6666)
           @book.tape.delete_at(@book.tape.length - 1)
           expect(@book.tape.last[:reason]).to eql(:filled)
         end
@@ -195,7 +208,22 @@ describe Gekko::Book do
           expect(order.remaining).to be_nil
           expect(@book.ask).to eql(600_0000)
           expect(@book.ticker[:last]).to eql(600_0000)
-          expect(@book.ticker[:volume_24h]).to eql(6666_6667)
+          expect(@book.ticker[:volume_24h]).to eql(6666_6666)
+          @book.tape.delete_at(@book.tape.length - 1)
+          expect(@book.tape.last[:reason]).to eql(:filled)
+        end
+
+        it 'should execute a larger bid properly with limiting quote margin without a size' do
+          order = Gekko::MarketOrder.new(:bid, random_id, nil, 2700_0000)
+          expect(@book.ask).to eql(600_0000)
+          @book.receive_order(order)
+          expect(order.done?).to be_truthy
+          expect(order.filled?).to be_truthy
+          expect(order.remaining_quote_margin).to be_zero
+          expect(order.remaining).to be_nil
+          expect(@book.ask).to eql(900_0000)
+          expect(@book.ticker[:last]).to eql(900_0000)
+          expect(@book.ticker[:volume_24h]).to eql(3_6666_6666)
           @book.tape.delete_at(@book.tape.length - 1)
           expect(@book.tape.last[:reason]).to eql(:filled)
         end

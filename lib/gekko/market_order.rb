@@ -6,7 +6,7 @@ module Gekko
   #
   class MarketOrder < Order
 
-    attr_accessor :quote_margin, :remaining_quote_margin
+    attr_accessor :quote_margin, :remaining_quote_margin, :max_precision
 
     def initialize(side, id, size, quote_margin, expiration = nil)
       super(side, id, size, expiration)
@@ -25,7 +25,8 @@ module Gekko
     # Returns +true+ if the order is filled
     #
     def filled?
-      (!size.nil? && remaining.zero?) ||
+      max_precision ||
+        (!size.nil? && remaining.zero?) ||
         (!quote_margin.nil? && remaining_quote_margin.zero?)
     end
 
