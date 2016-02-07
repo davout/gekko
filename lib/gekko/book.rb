@@ -53,47 +53,7 @@ module Gekko
             next_match = opposite_side.first
 
           else
-            trade_price     = next_match.price
-            max_quote_size  = nil
-
-            if order.is_a?(MarketOrder)
-              max_size_possible_with_quote_margin = order.remaining_quote_margin && (order.remaining_quote_margin * multiplier / trade_price).round
-            end
-
-            base_size = [
-              next_match.remaining,
-              order.remaining,
-              max_size_possible_with_quote_margin
-            ].compact.min
-
-
-            if order.is_a?(LimitOrder)
-              quote_size = (base_size * trade_price) / multiplier
-
-            elsif order.is_a?(MarketOrder)
-
-              if order.ask? || (order.remaining_quote_margin > (trade_price * base_size / multiplier))
-                quote_size = [(trade_price * base_size / multiplier).round, order.remaining_quote_margin].compact.min
-                order.remaining_quote_margin -= quote_size if order.quote_margin
-
-              elsif order.bid?
-                quote_size = order.remaining_quote_margin
-                order.remaining_quote_margin = 0
-              end
-            end
-
-            tape << {
-              type:             :execution,
-              price:            trade_price,
-              base_size:        base_size,
-              quote_size:       quote_size,
-              maker_order_id:   next_match.id.to_s,
-              taker_order_id:   order.id.to_s,
-              tick:             order.bid? ? :up : :down
-            }
-
-            order.remaining       -= base_size if order.remaining
-            next_match.remaining  -= base_size
+            execute_trade(next_match, order)
 
             if next_match.filled?
               tape << opposite_side.shift.message(:done, reason: :filled)
@@ -113,6 +73,56 @@ module Gekko
 
         tick! unless (ticker == old_ticker)
       end
+    end
+
+    #
+    # Executes a trade between two orders
+    #
+    # @param maker [Gekko::LimitOrder] The order in the book providing liquidity
+    # @param taker [Gekko::Order] The order being executed
+    #
+    def execute_trade(maker, taker)
+      trade_price     = maker.price
+      max_quote_size  = nil
+
+      if taker.is_a?(MarketOrder)
+        max_size_possible_with_quote_margin = taker.remaining_quote_margin && (taker.remaining_quote_margin * multiplier / trade_price).round
+      end
+
+      base_size = [
+        maker.remaining,
+        taker.remaining,
+        max_size_possible_with_quote_margin
+      ].compact.min
+
+
+      if taker.is_a?(LimitOrder)
+        quote_size = (base_size * trade_price) / multiplier
+
+      elsif taker.is_a?(MarketOrder)
+
+        if taker.ask? || (taker.remaining_quote_margin > (trade_price * base_size / multiplier))
+          quote_size = [(trade_price * base_size / multiplier).round, taker.remaining_quote_margin].compact.min
+          taker.remaining_quote_margin -= quote_size if taker.quote_margin
+
+        elsif taker.bid?
+          quote_size = taker.remaining_quote_margin
+          taker.remaining_quote_margin = 0
+        end
+      end
+
+      tape << {
+        type:             :execution,
+        price:            trade_price,
+        base_size:        base_size,
+        quote_size:       quote_size,
+        maker_taker_id:   maker.id.to_s,
+        taker_taker_id:   taker.id.to_s,
+        tick:             taker.bid? ? :up : :down
+      }
+
+      taker.remaining       -= base_size if taker.remaining
+      maker.remaining  -= base_size
     end
 
     #
