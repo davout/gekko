@@ -141,12 +141,12 @@ describe Gekko::Book do
         end
 
         it 'should execute an ask properly with limiting quote margin' do
-          order = Gekko::MarketOrder.new(:ask, random_id, nil, 1000_0000)
+          order = Gekko::MarketOrder.new(:ask, random_id, 100_0000_0000, 1000_0000)
           expect(@book.bid).to eql(500_0000)
           @book.receive_order(order)
           expect(order.done?).to be_truthy
           expect(order.filled?).to be_truthy
-          expect(order.remaining).to be_nil
+          expect(order.remaining).to eql(97_6666_6667)
           expect(@book.bid).to eql(300_0000)
           expect(@book.bids.first.remaining).to eql(6666_6667)
           expect(@book.ticker[:last]).to eql(300_0000)
@@ -215,10 +215,10 @@ describe Gekko::Book do
           end
 
           it 'should execute an ask with quote margin properly' do
-            order = Gekko::MarketOrder.new(:ask, random_id, nil, 100_0000_0000)
+            order = Gekko::MarketOrder.new(:ask, random_id, 100_0000_0000, 100_0000_0000)
             expect(@book.bid).to eql(500_0000)
             @book.receive_order(order)
-            expect(order.remaining).to be_nil
+            expect(order.remaining).to eql(96_0000_0000)
             expect(order.remaining_quote_margin).to eql(99_8600_0000)
             expect(@book.bid).to be_nil
             expect(@book.ticker[:last]).to eql(200_0000)

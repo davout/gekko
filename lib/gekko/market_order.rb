@@ -15,11 +15,9 @@ module Gekko
       @remaining_quote_margin = @quote_margin
 
       if bid?
-        quote_margin.nil? && 
-          raise('Quote currency margin must be provided for a market bid')
+        quote_margin.nil? && raise('Quote currency margin must be provided for a market bid')
       elsif ask?
-        (quote_margin.nil? ^ size.nil?) ||
-          raise('Quote currency margin and size can not be both specified for a market ask')
+        size.nil? && raise('Size must be provided for a market ask')
       end
     end
 
@@ -27,7 +25,6 @@ module Gekko
     # Returns +true+ if the order is filled
     #
     def filled?
-      #binding.pry
       (!size.nil? && remaining.zero?) ||
         (!quote_margin.nil? && remaining_quote_margin.zero?)
     end

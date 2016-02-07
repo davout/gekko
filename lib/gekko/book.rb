@@ -66,12 +66,14 @@ module Gekko
               max_size_possible_with_quote_margin
             ].compact.min
 
+
             if order.is_a?(LimitOrder)
               quote_size = (base_size * trade_price) / multiplier
 
             elsif order.is_a?(MarketOrder)
+
               if order.ask? || (order.remaining_quote_margin > (trade_price * base_size / multiplier))
-                quote_size = (trade_price * base_size / multiplier).round
+                quote_size = [(trade_price * base_size / multiplier).round, order.remaining_quote_margin].compact.min
                 order.remaining_quote_margin -= quote_size if order.quote_margin
 
               elsif order.bid?
