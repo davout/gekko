@@ -69,7 +69,8 @@ describe Gekko::Book do
         end
 
         it 'should accept unsorted orders and sort them before loading them' do
-          Timecop.freeze do
+          Timecop.freeze(Time.now + 60) do
+            @book.receive_order(Gekko::LimitOrder.new(:bid, random_id, 42_0000_0000, 300_0000))
             bogus_book = Oj.load(@book.serialize)
             bogus_book['bids'].reverse!
             bogus_book['asks'].reverse!

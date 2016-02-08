@@ -240,8 +240,8 @@ module Gekko
     #
     def self.from_hash(hsh)
       book = Book.new(hsh[:pair], {
-        bids: BookSide.new(:bid, orders: hsh[:bids].map { |o| symbolize_keys(o) }.sort { |a, b| b[:price] <=> a[:price] }),
-        asks: BookSide.new(:ask, orders: hsh[:asks].map { |o| symbolize_keys(o) }.sort { |a, b| a[:price] <=> b[:price] }),
+        bids: BookSide.new(:bid, orders: hsh[:bids].map { |o| symbolize_keys(o) }),
+        asks: BookSide.new(:ask, orders: hsh[:asks].map { |o| symbolize_keys(o) })
       })
 
       [:bids, :asks].each { |s| book.send(s).each { |ord| book.received[ord.id.to_s] = ord } }

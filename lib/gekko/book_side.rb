@@ -5,16 +5,16 @@ module Gekko
   #
   class BookSide < Array
 
-    # TODO: Insert orders more smartly by using a dichotomy search
-
     attr_accessor :side
 
     def initialize(side, opts = {})
-      # TODO "WARNING: Sort orders ?"
       raise "Incorrect side <#{side}>" unless [:bid, :ask].include?(side)
       @side = side
 
-      opts[:orders] && opts[:orders].each_with_index { |obj, idx| self[idx] = Order.from_hash(obj) }
+      if opts[:orders]
+        opts[:orders].each_with_index { |obj, idx| self[idx] = Order.from_hash(obj) }
+        sort!
+      end
     end
 
     #
@@ -43,7 +43,7 @@ module Gekko
       insert((idx || -1), order)
     end
 
-    # 
+    #
     # Returns the first order price, or +nil+ if there's no order
     #
     def top

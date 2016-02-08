@@ -25,6 +25,19 @@ module Gekko
       filled?
     end
 
+    #
+    # +LimitOrder+s are sorted by ASC price for asks, DESC price for bids,
+    # if prices are equal then creation timestamp is used, and older orders
+    # get priority.
+    #
+    # @return [Fixnum] 1 if self < other, -1 if not, 0 if equivalent
+    #
+    def <=>(other)
+      cmp = (ask? ? 1 : -1) * (price <=> other.price)
+      cmp = (created_at <=> other.created_at) if cmp.zero?
+      cmp
+    end
+
   end
 end
 
