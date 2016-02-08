@@ -9,9 +9,12 @@ module Gekko
   #
   class Book
 
+    extend Forwardable
     include Serialization
 
     attr_accessor :pair, :bids, :asks, :tape, :received, :base_precision, :multiplier
+
+    def_delegators :@tape, :logger, :logger=
 
     def initialize(pair, opts = {})
       self.pair           = opts[:pair] || pair
@@ -241,6 +244,7 @@ module Gekko
         asks: BookSide.new(:ask, orders: hsh[:asks].map { |o| symbolize_keys(o) }.sort { |a, b| a[:price] <=> b[:price] }),
       })
 
+      [:bids, :asks].each { |s| book.send(s).each { |ord| book.received[ord.id.to_s] = ord } }
       book.tape = Tape.from_hash(symbolize_keys(hsh[:tape])) if hsh[:tape]
 
       book
