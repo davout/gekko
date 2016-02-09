@@ -11,7 +11,7 @@ module Gekko
     SECONDS_IN_24H = 60 * 60 * 24
 
     attr_accessor :logger, :last_trade_price
-    attr_reader :volume_24h, :high_24h, :low_24h, :open_24h, :var_24h
+    attr_reader :volume_24h, :high_24h, :low_24h, :open_24h, :var_24h, :cursor
 
     def initialize(opts = {})
       @logger = opts[:logger]
@@ -178,6 +178,8 @@ module Gekko
     #
     def self.from_hash(hsh)
       tape = Tape.new
+
+      tape.instance_variable_set(:@cursor, hsh[:cursor])
 
       hsh[:events].each do |evt|
         e = symbolize_keys(evt)

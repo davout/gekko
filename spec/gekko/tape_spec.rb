@@ -10,28 +10,43 @@ describe Gekko::Tape do
     it 'should return the next unread event' do
       Timecop.freeze do
         2.times { @tape << {} }
-        expect(@tape.next).to(eql({ sequence: 0, time: Time.now.to_f })) 
-        expect(@tape.next).to(eql({ sequence: 1, time: Time.now.to_f })) 
+        expect(@tape.next).to(eql({ sequence: 0, time: Time.now.to_f }))
+        expect(@tape.next).to(eql({ sequence: 1, time: Time.now.to_f }))
         expect(@tape.next).to be_nil
       end
+    end
+  end
+
+  describe '#cursor' do
+    it 'should be incremented by an execution' do
+      execution = { type: :execution, price: 2, base_size: 42, quote_size: 84, time: Time.now.to_f }
+      expect { @tape << execution; @tape.next }.to change { @tape.cursor }.by(1)
+    end
+
+    it 'should be re-imported correctly' do
+      execution = { type: :execution, price: 2, base_size: 42, quote_size: 84, time: Time.now.to_f }
+      prev_cur = @tape.cursor
+      5.times { @tape << execution; @tape.next }
+      expect(@tape.cursor).to eql(5 + prev_cur)
+      expect(Gekko::Tape.from_hash(@tape.to_hash).cursor).to eql(5 + prev_cur)
     end
   end
 
   describe '#volume_24h' do
     it 'should report volume on trades that just happened' do
       execution = { type: :execution, price: 2, base_size: 42, quote_size: 84, time: Time.now.to_f }
-      expect { @tape << execution }.to change { @tape.volume_24h }.from(0).to(42) 
-      expect { @tape << execution }.to change { @tape.volume_24h }.from(42).to(84) 
+      expect { @tape << execution }.to change { @tape.volume_24h }.from(0).to(42)
+      expect { @tape << execution }.to change { @tape.volume_24h }.from(42).to(84)
     end
 
     it 'should not take older than 24h trades into account' do
       old_ex = { type: :execution, price: 1, base_size: 42, quote_size: 42, time: Time.now.to_f }
-      expect { @tape << old_ex }.to change { @tape.volume_24h }.from(0).to(42) 
+      expect { @tape << old_ex }.to change { @tape.volume_24h }.from(0).to(42)
 
       Timecop.freeze(Time.at(Time.now + 3600 * 25)) do
         @tape.move_24h_cursor!
         new_ex = { type: :execution, price: 1, base_size: 50, quote_size: 50, time: Time.now.to_f }
-        expect { @tape << new_ex }.to change { @tape.volume_24h }.from(0).to(50) 
+        expect { @tape << new_ex }.to change { @tape.volume_24h }.from(0).to(50)
       end
     end
   end
@@ -39,18 +54,18 @@ describe Gekko::Tape do
   describe '#high_24h' do
     it 'should not take highs older than 24h into account' do
       old_ex = { type: :execution, price: 1000, base_size: 42, quote_size: 42, time: Time.now.to_f }
-      expect { @tape << old_ex }.to change { @tape.high_24h }.from(nil).to(1000) 
+      expect { @tape << old_ex }.to change { @tape.high_24h }.from(nil).to(1000)
 
       Timecop.freeze(Time.at(Time.now + 3600 * 25)) do
         @tape.move_24h_cursor!
         new_ex = { type: :execution, price: 500, base_size: 50, quote_size: 50, time: Time.now.to_f }
-        expect { @tape << new_ex }.to change { @tape.low_24h }.from(nil).to(500) 
+        expect { @tape << new_ex }.to change { @tape.low_24h }.from(nil).to(500)
       end
     end
 
     it 'should update the high according to executions' do
       old_ex_1 = { type: :execution, price: 1000, base_size: 42, quote_size: 42, time: Time.now.to_f }
-      expect { @tape << old_ex_1 }.to change { @tape.high_24h }.from(nil).to(1000) 
+      expect { @tape << old_ex_1 }.to change { @tape.high_24h }.from(nil).to(1000)
 
       old_ex_2 = { type: :execution, price: 900, base_size: 42, quote_size: 42, time: Time.now.to_f }
       expect { @tape << old_ex_2 }.not_to change { @tape.high_24h }
@@ -63,7 +78,7 @@ describe Gekko::Tape do
   describe '#low_24h' do
     it 'should update the low according to executions' do
       old_ex_1 = { type: :execution, price: 1000, base_size: 42, quote_size: 42, time: Time.now.to_f }
-      expect { @tape << old_ex_1 }.to change { @tape.low_24h }.from(nil).to(1000) 
+      expect { @tape << old_ex_1 }.to change { @tape.low_24h }.from(nil).to(1000)
 
       old_ex_2 = { type: :execution, price: 1100, base_size: 42, quote_size: 42, time: Time.now.to_f }
       expect { @tape << old_ex_2 }.not_to change { @tape.low_24h }
@@ -74,12 +89,12 @@ describe Gekko::Tape do
 
     it 'should not take lows older than 24h into account' do
       old_ex = { type: :execution, price: 500, base_size: 42, quote_size: 42, time: Time.now.to_f }
-      expect { @tape << old_ex }.to change { @tape.low_24h }.from(nil).to(500) 
+      expect { @tape << old_ex }.to change { @tape.low_24h }.from(nil).to(500)
 
       Timecop.freeze(Time.at(Time.now + 3600 * 12)) do
         new_ex = { type: :execution, price: 750, base_size: 50, quote_size: 50, time: Time.now.to_f }
         expect { @tape << new_ex }.not_to change { @tape.low_24h }
-        Timecop.travel(Time.at(Time.now + 3600 * 13)) do 
+        Timecop.travel(Time.at(Time.now + 3600 * 13)) do
           expect { @tape.move_24h_cursor! }.to change { @tape.low_24h }.from(500).to(750)
         end
       end
@@ -121,5 +136,6 @@ describe Gekko::Tape do
       end
     end
   end
+
 end
 
