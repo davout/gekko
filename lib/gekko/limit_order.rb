@@ -38,6 +38,19 @@ module Gekko
       cmp
     end
 
+    #
+    # Initializes a +Gekko::LimitOrder+ subclass from a +Hash+ instance
+    #
+    # @param hsh [Hash] The order data
+    # @return [Gekko::LimitOrder] A limit order
+    #
+    def self.from_hash(hsh)
+      order = LimitOrder.new(hsh[:side], UUID.parse(hsh[:id]), hsh[:size], hsh[:price], hsh[:expiration])
+      order.remaining   = hsh[:remaining]
+      order.created_at  = hsh[:created_at] if hsh[:created_at]
+      order
+    end
+
   end
 end
 

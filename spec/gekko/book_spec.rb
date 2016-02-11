@@ -53,7 +53,7 @@ describe Gekko::Book do
 
     context 'with an execution to serialize' do
       before do
-        @book.receive_order(Gekko::LimitOrder.new(:ask, random_id, 1_0000_0000, 200_0000))
+        @book.receive_order(Gekko::LimitOrder.new(:ask, random_id, 5000_0000, 200_0000))
       end
 
       describe '#dump' do

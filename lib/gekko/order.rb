@@ -132,14 +132,7 @@ module Gekko
     # @return [Gekko::Order] A trade order
     #
     def self.from_hash(hsh)
-      order = if hsh[:price]
-                LimitOrder.new(hsh[:side], UUID.parse(hsh[:id]), hsh[:size], hsh[:price], hsh[:expiration])
-              else
-                MarketOrder.new(hsh[:side], UUID.parse(hsh[:id]), hsh[:size], hsh[:quote_margin], hsh[:expiration])
-              end
-
-      order.created_at = hsh[:created_at] if hsh[:created_at]
-      order
+      (hsh[:price] ? LimitOrder : MarketOrder).from_hash(hsh)
     end
 
   end

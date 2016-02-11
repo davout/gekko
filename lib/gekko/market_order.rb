@@ -39,6 +39,18 @@ module Gekko
         (bid? && remaining_quote_margin.zero?)
     end
 
+    #
+    # Initializes a +Gekko::MarketOrder+ subclass from a +Hash+ instance
+    #
+    # @param hsh [Hash] The order data
+    # @return [Gekko::MarketOrder] A market order
+    #
+    def self.from_hash(hsh)
+      order = MarketOrder.new(hsh[:side], UUID.parse(hsh[:id]), hsh[:size], hsh[:quote_margin], hsh[:expiration])
+      order.created_at  = hsh[:created_at] if hsh[:created_at]
+      order
+    end
+
   end
 end
 
