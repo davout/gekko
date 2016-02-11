@@ -46,7 +46,7 @@ module Gekko
     #
     def self.from_hash(hsh)
       order = LimitOrder.new(hsh[:side], UUID.parse(hsh[:id]), hsh[:size], hsh[:price], hsh[:expiration])
-      order.remaining   = hsh[:remaining]
+      order.remaining   = hsh[:remaining] || hsh[:size]
       order.created_at  = hsh[:created_at] if hsh[:created_at]
       order
     end
