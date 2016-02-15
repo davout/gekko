@@ -113,6 +113,12 @@ describe Gekko::Book do
         expect(@book.tape.size - 1).to eql(original_tape_size)
       end
 
+      it 'should detect infinite matching loops' do
+        @book.asks[1].id = @book.asks[0].id
+        expect { @book.receive_order(Gekko::LimitOrder.new(:bid, random_id, random_id, 2_5000_0000, 800_0000)) }.
+          to raise_error('Infinite matching loop detected !!')
+      end
+
       it 'should not allow self-trading' do
         uid = UUID.random_create
         @book.bids[1].uid = uid

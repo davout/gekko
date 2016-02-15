@@ -49,8 +49,14 @@ module Gekko
         order_side    = order.bid? ? bids : asks
         opposite_side = order.bid? ? asks : bids
         next_match    = opposite_side.first
+        prev_match_id = nil
 
         while !order.done? && order.crosses?(next_match)
+          # If we match against the same order twice in a row, something went seriously
+          # wrong, we'd rather noisily die at this point.
+          raise 'Infinite matching loop detected !!' if (prev_match_id == next_match.id)
+          prev_match_id = next_match.id
+
           if next_match.expired?
             tape << opposite_side.shift.message(:done, reason: :expired)
             next_match = opposite_side.first
