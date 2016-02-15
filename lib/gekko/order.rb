@@ -9,10 +9,11 @@ module Gekko
 
     include Serialization
 
-    attr_accessor :id, :side, :size, :remaining, :price, :expiration, :created_at
+    attr_accessor :id, :uid, :side, :size, :remaining, :price, :expiration, :created_at
 
-    def initialize(side, id, size, expiration = nil)
+    def initialize(side, id, uid, size, expiration = nil)
       @id         = id
+      @uid        = uid
       @side       = side && side.to_sym
       @size       = size
       @remaining  = @size
@@ -20,6 +21,7 @@ module Gekko
       @created_at = Time.now.to_f
 
       raise 'Orders must have an UUID'                    unless @id && @id.is_a?(UUID)
+      raise 'Orders must have a user ID'                  unless @uid && @uid.is_a?(UUID)
       raise 'Side must be either :bid or :ask'            unless [:bid, :ask].include?(@side)
       raise 'Size must be a positive integer'             if (@size && (!@size.is_a?(Fixnum) || @size <= 0))
       raise 'Expiration must be omitted or be an integer' unless (@expiration.nil? || (@expiration.is_a?(Fixnum) && @expiration > 0))
@@ -108,6 +110,7 @@ module Gekko
     def to_hash
       hsh = {
         id:           id.to_s,
+        uid:          uid.to_s,
         side:         side,
         size:         size,
         price:        price,

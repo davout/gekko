@@ -55,6 +55,11 @@ module Gekko
             tape << opposite_side.shift.message(:done, reason: :expired)
             next_match = opposite_side.first
 
+          elsif order.uid == next_match.uid
+            # Same user/account associated to order, we cancel the next match
+            tape << opposite_side.shift.message(:done, reason: :canceled)
+            next_match = opposite_side.first
+
           else
             execute_trade(next_match, order)
 
