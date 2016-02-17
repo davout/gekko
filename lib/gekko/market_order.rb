@@ -8,8 +8,8 @@ module Gekko
 
     attr_accessor :quote_margin, :remaining_quote_margin, :max_precision
 
-    def initialize(side, id, uid, size, quote_margin, expiration = nil)
-      super(side, id, uid, size, expiration)
+    def initialize(side, id, uid, size, quote_margin, opts = {})
+      super(side, id, uid, size, opts)
 
       @quote_margin           = quote_margin
       @remaining_quote_margin = @quote_margin
@@ -46,7 +46,7 @@ module Gekko
     # @return [Gekko::MarketOrder] A market order
     #
     def self.from_hash(hsh)
-      order = MarketOrder.new(hsh[:side], UUID.parse(hsh[:id]), UUID.parse(hsh[:uid]), hsh[:size], hsh[:quote_margin], hsh[:expiration])
+      order = MarketOrder.new(hsh[:side], UUID.parse(hsh[:id]), UUID.parse(hsh[:uid]), hsh[:size], hsh[:quote_margin], expiration: hsh[:expiration])
       order.created_at  = hsh[:created_at] if hsh[:created_at]
       order
     end

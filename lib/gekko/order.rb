@@ -9,16 +9,17 @@ module Gekko
 
     include Serialization
 
-    attr_accessor :id, :uid, :side, :size, :remaining, :price, :expiration, :created_at
+    attr_accessor :id, :uid, :side, :size, :remaining, :price, :expiration, :created_at, :post_only
 
-    def initialize(side, id, uid, size, expiration = nil)
+    def initialize(side, id, uid, size, opts = {})
       @id         = id
       @uid        = uid
       @side       = side && side.to_sym
       @size       = size
       @remaining  = @size
-      @expiration = expiration
+      @expiration = opts[:expiration]
       @created_at = Time.now.to_f
+      @post_only  = opts[:post_only]
 
       raise 'Orders must have an UUID'                    unless @id && @id.is_a?(UUID)
       raise 'Orders must have a user ID'                  unless @uid && @uid.is_a?(UUID)

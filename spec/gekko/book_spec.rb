@@ -103,7 +103,7 @@ describe Gekko::Book do
       end
 
       it 'should not execute expired orders' do
-        expired_order = Gekko::LimitOrder.new(:bid, random_id, random_id, 1_0000_0000, 800_0000, (Time.now.to_i - 1))
+        expired_order = Gekko::LimitOrder.new(:bid, random_id, random_id, 1_0000_0000, 800_0000, expiration: (Time.now.to_i - 1))
         original_tape_size = @book.tape.size
         @book.receive_order(expired_order)
         last_msg = @book.tape.last
@@ -140,6 +140,27 @@ describe Gekko::Book do
         expect(@book.spread).to eq(300_0000)
         expect(@book.ask).to eq(800_0000)
         expect(@book.bid).to eq(500_0000)
+      end
+
+      it 'should update the book with a post-only order if it does not cross a resting order' do
+        order = Gekko::LimitOrder.new(:bid, random_id, random_id, 2_5000_0000, 550_0000, post_only: true)
+        @book.receive_order(order)
+        expect(@book.bids.first.id).to eq(order.id)
+        expect(@book.ask).to eq(600_0000)
+        expect(@book.bid).to eq(550_0000)
+        expect(@book.ticker[:volume_24h]).to eq(0)
+      end
+
+      it 'should kill a post-only order if it crosses a resting order' do
+        order = Gekko::LimitOrder.new(:bid, random_id, random_id, 2_5000_0000, 800_0000, post_only: true)
+        @book.receive_order(order)
+        expect(@book.asks.first.remaining).to eq(1_0000_0000)
+        expect(@book.asks.count).to eq(4)
+        expect(@book.spread).to eq(100_0000)
+        expect(@book.ask).to eq(600_0000)
+        expect(@book.bid).to eq(500_0000)
+        expect(@book.tape.last[:type]).to eql(:reject)
+        expect(@book.tape.last[:reason]).to eql(:would_execute)
       end
 
       it 'should execute a limit ask properly' do

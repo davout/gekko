@@ -7,8 +7,8 @@ module Gekko
 
     attr_accessor :price
 
-    def initialize(side, id, uid, size, price, expiration = nil)
-      super(side, id, uid, size, expiration)
+    def initialize(side, id, uid, size, price, opts = {})
+      super(side, id, uid, size, opts)
       @price = price
 
       raise 'Price must be a positive integer' if @price.nil? || (!@price.is_a?(Fixnum) || (@price <= 0))
@@ -45,7 +45,7 @@ module Gekko
     # @return [Gekko::LimitOrder] A limit order
     #
     def self.from_hash(hsh)
-      order = LimitOrder.new(hsh[:side], UUID.parse(hsh[:id]), UUID.parse(hsh[:uid]), hsh[:size], hsh[:price], hsh[:expiration])
+      order = LimitOrder.new(hsh[:side], UUID.parse(hsh[:id]), UUID.parse(hsh[:uid]), hsh[:size], hsh[:price], expiration: hsh[:expiration])
       order.remaining   = hsh[:remaining] || hsh[:size]
       order.created_at  = hsh[:created_at] if hsh[:created_at]
       order

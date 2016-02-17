@@ -34,11 +34,17 @@ module Gekko
     def receive_order(order)
       raise 'Order must be a Gekko::LimitOrder or a Gekko::MarketOrder' unless [LimitOrder, MarketOrder].include?(order.class)
 
+      # The side from which we'll pop orders
+      opposite_side = order.bid? ? asks : bids
+
       if received.has_key?(order.id.to_s)
         tape << order.message(:reject, reason: :duplicate_id)
 
       elsif order.expired?
         tape << order.message(:reject, reason: :expired)
+
+      elsif order.post_only && order.crosses?(opposite_side.first)
+        tape << order.message(:reject, reason: :would_execute)
 
       else
         old_ticker = ticker
@@ -47,7 +53,6 @@ module Gekko
         tape << order.message(:received)
 
         order_side    = order.bid? ? bids : asks
-        opposite_side = order.bid? ? asks : bids
         next_match    = opposite_side.first
         prev_match_id = nil
 
