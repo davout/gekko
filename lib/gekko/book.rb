@@ -24,30 +24,37 @@ module Gekko
       self.base_precision = opts[:base_precision] || 8
       self.multiplier     = BigDecimal(10 ** base_precision)
       self.received       = opts[:received] || {}
+
+      @triggered_stops = []
     end
 
     #
     # Receives an order and executes it
     #
     # @param order [Order] The order to execute
+    # @param execute_triggered_stops [Boolean] Whether to also execute the STOP orders triggered 
+    #   by the current received order executions
     #
-    def receive_order(order)
+    def receive_order(order, stop_order_execution = false)
       raise "Order must be a Gekko::LimitOrder or a Gekko::MarketOrder."      unless [LimitOrder, MarketOrder].include?(order.class)
       raise "Can't receive a new STOP before a first trade has taken place."  if order.stop? && ticker[:last].nil?
 
       # We need to initialize the stop_price for trailing stops if necessary
       if order.stop? && !order.stop_price
-        if order.stop_price
-          order.stop_price = ticker[:last] + order.stop_percent / Gekko::Order::TRL_STOP_PCT_MULTIPLIER * (order.bid? ? 1 : -1)
+        if order.stop_percent
+          order.stop_price = ticker[:last] + (ticker[:last] * order.stop_percent / Gekko::Order::TRL_STOP_PCT_MULTIPLIER * (order.bid? ? 1 : -1)).round
         elsif order.stop_offset
           order.stop_price = ticker[:last] + order.stop_offset * (order.bid? ? 1 : -1)
         end
       end
 
+      # The side of the received order
+      current_side = (order.ask? ? asks : bids)
+
       # The side from which we'll pop orders
       opposite_side = order.bid? ? asks : bids
 
-      if received.has_key?(order.id.to_s)
+      if received.has_key?(order.id.to_s) && !stop_order_execution
         tape << order.message(:reject, reason: :duplicate_id)
 
       else
@@ -56,8 +63,8 @@ module Gekko
         if order.expired?
           tape << order.message(:reject, reason: :expired)
 
-        elsif order.stop? && !order.should_trigger?(ticker[:last])
-          (order.ask? ? asks : bids).stops << order # Add the STOP to the list of currently active STOPs
+        elsif order.stop? && !order.should_trigger?(tape.last_trade_price)
+          current_side.stops << order # Add the STOP to the list of currently active STOPs
 
         elsif order.post_only && order.crosses?(opposite_side.first)
           tape << order.message(:reject, reason: :would_execute)
@@ -104,7 +111,22 @@ module Gekko
             tape << order.message(:open)
           end
 
-          tick! unless (ticker == old_ticker)
+          current_side.stops.each do |stop|
+            if stop.should_trigger?(tape.last_trade_price)
+              @triggered_stops << current_side.stops.delete(stop)
+            end
+          end
+
+          opposite_side.stops.each { |s| s.update_trailing_stop(tape.last_trade_price) }
+
+          if !stop_order_execution
+            # We only want to execute triggered stops at the top level as to correctly order them
+            while t = @triggered_stops.shift
+              receive_order(t, true)
+            end
+
+            tick! unless (ticker == old_ticker)
+          end
         end
       end
     end
@@ -169,11 +191,14 @@ module Gekko
       prev_ask = ask
 
       order = received[order_id.to_s]
-      s = order.bid? ? bids : asks
-      dels = s.delete(order) || s.stops.delete(order)
-      dels && tape << order.message(:done, reason: :canceled)
 
-      tick! if (prev_bid != bid) || (prev_ask != ask)
+      if order
+        s = order.bid? ? bids : asks
+        dels = s.delete(order) || s.stops.delete(order)
+        dels && tape << order.message(:done, reason: :canceled)
+
+        tick! if (prev_bid != bid) || (prev_ask != ask)
+      end
     end
 
     #

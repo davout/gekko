@@ -67,7 +67,11 @@ describe Gekko::Book do
         end
 
         it 'should import and export currently active STOPs' do
-          pending
+          taker = Gekko::LimitOrder.new(:ask, random_id, random_id, 1_0000_0000, 100_0000)
+          stop = Gekko::LimitOrder.new(:ask, random_id, random_id, 1_0000_0000, 100_0000, { stop_offset: 100_0000 })
+          book.receive_order(taker)
+          expect { book.receive_order(stop) }.to change { stop.stop_price }.from(nil).to(400_0000)
+          expect(Gekko::Book.deserialize(book.serialize).asks.stops.first.stop_offset).to eql(100_0000)
         end
 
         it 'should accept unsorted orders and sort them before loading them' do
@@ -93,48 +97,146 @@ describe Gekko::Book do
 
     describe '#receive_order' do
       context 'when receiving a STOP order' do
-        let(:stop) { Gekko::LimitOrder.new(:bid, random_id, random_id, 1_0000, 1_0000, { stop_price: 1000 }) }
+        let(:bid_stop) { Gekko::LimitOrder.new(:bid, random_id, random_id, 1_0000, 1_0000, { stop_price: 1000 }) }
+        let(:ask_stop) { Gekko::LimitOrder.new(:ask, random_id, random_id, 1_0000, 1_0000_0000, { stop_price: 1000 }) }
 
-        it 'should execute it immediately if the STOP price is already reached' do
-          allow(book).to receive(:ticker).and_return({ last: 1500 })
-          expect { book.receive_order(stop) }.to change { book.tape.size }.by(2)
+        it 'should execute a bid immediately if the STOP price is already below the last' do
+          allow(book.tape).to receive(:last_trade_price).and_return(1500)
+          expect { book.receive_order(bid_stop) }.to change { book.tape.size }.by(2)
           expect(book.tape[book.tape.size - 2][:type]).to eql(:received)
-          expect(book.tape[book.tape.size - 2][:order_id]).to eql(stop.id.to_s)
+          expect(book.tape[book.tape.size - 2][:order_id]).to eql(bid_stop.id.to_s)
           expect(book.tape.last[:type]).to eql(:open)
-          expect(book.tape.last[:order_id]).to eql(stop.id.to_s)
+          expect(book.tape.last[:order_id]).to eql(bid_stop.id.to_s)
         end
 
-        it 'should add it to the active STOPs on the correct book side' do
+        it 'should add a bid to the active STOPs on the correct book side if the stop price is above the last' do
           allow(book.tape).to receive(:last_trade_price).and_return(500)
-          expect { book.receive_order(stop) }.to change { book.bids.stops.size }.by(1)
+          expect { book.receive_order(bid_stop) }.to change { book.bids.stops.size }.by(1)
+        end
+
+        it 'should execute an ask immediately if the STOP price is already above the last' do
+          allow(book.tape).to receive(:last_trade_price).and_return(500)
+          expect { book.receive_order(ask_stop) }.to change { book.tape.size }.by(2)
+          expect(book.tape[book.tape.size - 2][:type]).to eql(:received)
+          expect(book.tape[book.tape.size - 2][:order_id]).to eql(ask_stop.id.to_s)
+          expect(book.tape.last[:type]).to eql(:open)
+          expect(book.tape.last[:order_id]).to eql(ask_stop.id.to_s)
+        end
+
+        it 'should add an ask to the active STOPs on the correct book side if the stop price is above the last' do
+          allow(book.tape).to receive(:last_trade_price).and_return(1500)
+          expect { book.receive_order(ask_stop) }.to change { book.asks.stops.size }.by(1)
+        end
+
+        it 'should initialize an offset trailing stop ask' do
+          allow(book.tape).to receive(:last_trade_price).and_return(500_0000)
+          order = Gekko::MarketOrder.new(:ask, random_id, random_id, 1000, 1000, { stop_offset: 100_0000 })
+          expect { book.receive_order(order) }.
+            to change { order.stop_price }.from(nil).to(400_0000)
+        end
+
+        it 'should initialize an offset trailing stop bid' do
+          allow(book.tape).to receive(:last_trade_price).and_return(500_0000)
+          order = Gekko::MarketOrder.new(:bid, random_id, random_id, 1000, 1000, { stop_offset: 100_0000 })
+          expect { book.receive_order(order) }.
+            to change { order.stop_price }.from(nil).to(600_0000)
+        end
+
+        it 'should initialize a percentage trailing stop ask' do
+          allow(book.tape).to receive(:last_trade_price).and_return(500_0000)
+          order = Gekko::MarketOrder.new(:ask, random_id, random_id, 1000, 1000, { stop_percent: 1234 })
+          expect { book.receive_order(order) }.
+            to change { order.stop_price }.from(nil).to(438_3000)
+        end
+
+        it 'should initialize a percentage trailing stop bid' do
+          allow(book.tape).to receive(:last_trade_price).and_return(500_0000)
+          order = Gekko::MarketOrder.new(:bid, random_id, random_id, 1000, 1000, { stop_percent: 4567 })
+          expect { book.receive_order(order) }.
+            to change { order.stop_price }.from(nil).to(728_3500)
         end
       end
 
       context 'with currently active STOP orders' do
         it 'should execute and remove the STOPs that had their price crossed' do
-          pending
+          stop    = Gekko::LimitOrder.new(:bid, random_id, random_id, 1_0000_0000, 750_0000, { stop_price: 700_0000 })
+          taker1  = Gekko::MarketOrder.new(:bid, random_id, random_id, 1_0000_0000, 600_0000)
+          taker2  = Gekko::MarketOrder.new(:bid, random_id, random_id, 1_0000_0000, 700_0000)
+
+          book.receive_order(taker1)
+          expect { book.receive_order(stop) }.to_not change { book.tape.size }
+          expect { book.receive_order(taker2) }.to change { book.tape.size }.by(7)
+          expect(book.bid).to eql(750_0000)
+          expect(book.tape[-2][:type]).to eql(:open)
+          expect(book.tape[-2][:order_id]).to eql(stop.id.to_s)
         end
 
-        it 'should update percent trailing STOPs when the price moves in favor of the trader' do
-          pending
+        context 'when the market moves against the order' do
+          it 'should not update an offset trailing stop ask' do
+            allow(book.tape).to receive(:last_trade_price).and_return(500_0000)
+            order = Gekko::MarketOrder.new(:ask, random_id, random_id, 1000, 1000, { stop_offset: 150_0000 })
+            expect { book.receive_order(order) }.to change { order.stop_price }.from(nil).to(350_0000)
+            taker = Gekko::LimitOrder.new(:ask, random_id, random_id, 1_5000_0000, 100_0000)
+            expect { book.receive_order(taker) }.to_not change { order.stop_price }
+          end
+
+          it 'should not update an offset trailing stop bid' do
+            allow(book.tape).to receive(:last_trade_price).and_return(600_0000)
+            order = Gekko::MarketOrder.new(:bid, random_id, random_id, 1000, 1000, { stop_offset: 150_0000 })
+            expect { book.receive_order(order) }.to change { order.stop_price }.from(nil).to(750_0000)
+            taker = Gekko::LimitOrder.new(:bid, random_id, random_id, 1_5000_0000, 1000_0000)
+            expect { book.receive_order(taker) }.to_not change { order.stop_price }
+          end
+
+          it 'should not update a percentage trailing stop ask' do
+            allow(book.tape).to receive(:last_trade_price).and_return(500_0000)
+            order = Gekko::MarketOrder.new(:ask, random_id, random_id, 1000, 1000, { stop_percent: 5000 })
+            expect { book.receive_order(order) }.to change { order.stop_price }.from(nil).to(250_0000)
+            taker = Gekko::LimitOrder.new(:ask, random_id, random_id, 1_5000_0000, 100_0000)
+            expect { book.receive_order(taker) }.to_not change { order.stop_price }
+          end
+
+          it 'should not update a percentage trailing stop bid' do
+            allow(book.tape).to receive(:last_trade_price).and_return(600_0000)
+            order = Gekko::MarketOrder.new(:bid, random_id, random_id, 1000, 1000, { stop_percent: 2000 })
+            expect { book.receive_order(order) }.to change { order.stop_price }.from(nil).to(720_0000)
+            taker = Gekko::LimitOrder.new(:bid, random_id, random_id, 1_5000_0000, 1000_0000)
+            expect { book.receive_order(taker) }.to_not change { order.stop_price }
+          end
         end
 
-        it 'should not update percent trailing STOPs when the price moves against the trader' do
-          pending
-        end
+        context 'when the market moves in favor of the order' do
+          it 'should update an offset trailing stop ask' do
+            book.receive_order(Gekko::LimitOrder.new(:ask, random_id, random_id, 100_0000, 100_0000))
+            order = Gekko::MarketOrder.new(:ask, random_id, random_id, 1000, 1000, { stop_offset: 150_0000 })
+            expect { book.receive_order(order) }.to change { order.stop_price }.from(nil).to(350_0000)
+            taker = Gekko::LimitOrder.new(:bid, random_id, random_id, 1_5000_0000, 1000_0000)
+            expect { book.receive_order(taker) }.to change { order.stop_price }.from(350_0000).to(550_0000)
+          end
 
-        it 'should update offset trailing STOPs when the price moves in favor of the trader' do
-          pending
-        end
+          it 'should update an offset trailing stop bid' do
+            book.receive_order(Gekko::LimitOrder.new(:bid, random_id, random_id, 100_0000, 1000_0000))
+            order = Gekko::MarketOrder.new(:bid, random_id, random_id, 1000, 1000, { stop_offset: 150_0000 })
+            expect { book.receive_order(order) }.to change { order.stop_price }.from(nil).to(750_0000)
+            taker = Gekko::LimitOrder.new(:ask, random_id, random_id, 1_5000_0000, 100_0000)
+            expect { book.receive_order(taker) }.to change { order.stop_price }.from(750_0000).to(550_0000)
+          end
 
-        it 'should not update offset trailing STOPs when the price moves against the trader' do
-          pending
-        end
+          it 'should update a percentage trailing stop ask' do
+            book.receive_order(Gekko::LimitOrder.new(:ask, random_id, random_id, 100_0000, 100_0000))
+            order = Gekko::MarketOrder.new(:ask, random_id, random_id, 1000, 1000, { stop_offset: 150_0000 })
+            expect { book.receive_order(order) }.to change { order.stop_price }.from(nil).to(350_0000)
+            taker = Gekko::LimitOrder.new(:bid, random_id, random_id, 1_5000_0000, 1000_0000)
+            expect { book.receive_order(taker) }.to change { order.stop_price }.from(350_0000).to(550_0000)
+          end
 
-        it 'should execute stops in a queue in the correct order' do
-          # Execution of triggered STOPs should trigger other STOPs in sane ways and honor arrival order
-          # instead of immediately trigger and execute them by pushing the price further up/down
-          pending
+          it 'should update a percentage trailing stop bid' do
+            book.receive_order(Gekko::LimitOrder.new(:bid, random_id, random_id, 100_0000, 1000_0000))
+            order = Gekko::MarketOrder.new(:bid, random_id, random_id, 1000, 1000, { stop_percent: 200 })
+            expect { book.receive_order(order) }.to change { order.stop_price }.from(nil).to(612_0000)
+            taker = Gekko::LimitOrder.new(:ask, random_id, random_id, 1_5000_0000, 100_0000)
+            expect { book.receive_order(taker) }.to change { order.stop_price }.from(612_0000).to(408_0000)
+          end
         end
       end
 
@@ -409,7 +511,7 @@ describe Gekko::Book do
       end
 
       it 'should ignore requests to cancel uknown orders' do
-        pending
+        expect { book.cancel(random_id) }.to_not raise_error
       end
 
       it 'should knock an order off the book' do

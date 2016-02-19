@@ -9,7 +9,10 @@ module Gekko
 
     include Serialization
 
-    TRL_STOP_PCT_MULTIPLIER = BigDecimal(1000)
+    #
+    # Multiplier applied to the trailing STOP percentage to be able to pass it around as integer
+    #
+    TRL_STOP_PCT_MULTIPLIER = BigDecimal(10000)
 
     attr_accessor :id, :uid, :side, :size, :remaining, :price, :expiration, :created_at, :post_only,
       :stop_price, :stop_percent, :stop_offset
@@ -172,6 +175,24 @@ module Gekko
     #
     def self.from_hash(hsh)
       (hsh[:price] ? LimitOrder : MarketOrder).from_hash(hsh)
+    end
+
+    #
+    # Updates the stop price according to either the +stop_percent+ or
+    # or the +stop_offset+ attributes
+    #
+    # @param p [Fixnum] The price used to update the +stop_price+
+    #
+    def update_trailing_stop(p)
+      sign = bid? ? 1 : -1
+
+      if stop_percent
+        new_price = p + (p * stop_percent * sign / TRL_STOP_PCT_MULTIPLIER).round
+        self.stop_price = new_price if (bid? && (new_price < stop_price)) || (ask? && (new_price > stop_price))
+      elsif stop_offset
+        new_price = p + stop_offset * sign
+        self.stop_price = new_price if (bid? && (new_price < stop_price)) || (ask? && (new_price > stop_price))
+      end
     end
 
   end
