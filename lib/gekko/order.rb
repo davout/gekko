@@ -9,24 +9,37 @@ module Gekko
 
     include Serialization
 
-    attr_accessor :id, :uid, :side, :size, :remaining, :price, :expiration, :created_at, :post_only
+    TRL_STOP_PCT_MULTIPLIER = BigDecimal(1000)
+
+    attr_accessor :id, :uid, :side, :size, :remaining, :price, :expiration, :created_at, :post_only,
+      :stop_price, :stop_percent, :stop_offset
 
     def initialize(side, id, uid, size, opts = {})
-      @id         = id
-      @uid        = uid
-      @side       = side && side.to_sym
-      @size       = size
-      @remaining  = @size
-      @expiration = opts[:expiration]
-      @created_at = Time.now.to_f
-      @post_only  = opts[:post_only]
+      @id           = id
+      @uid          = uid
+      @side         = side && side.to_sym
+      @size         = size
+      @remaining    = @size
+      @expiration   = opts[:expiration]
+      @created_at   = Time.now.to_f
+      @post_only    = opts[:post_only]
+      @stop_price   = opts[:stop_price]
+      @stop_percent = opts[:stop_percent]
+      @stop_offset  = opts[:stop_offset]
 
-      raise 'Orders must have an UUID'                    unless @id && @id.is_a?(UUID)
-      raise 'Orders must have a user ID'                  unless @uid && @uid.is_a?(UUID)
-      raise 'Side must be either :bid or :ask'            unless [:bid, :ask].include?(@side)
-      raise 'Size must be a positive integer'             if (@size && (!@size.is_a?(Fixnum) || @size <= 0))
-      raise 'Expiration must be omitted or be an integer' unless (@expiration.nil? || (@expiration.is_a?(Fixnum) && @expiration > 0))
-      raise 'The order creation timestamp can''t be nil'  if !@created_at
+      raise 'Orders must have an UUID'                        unless @id && @id.is_a?(UUID)
+      raise 'Orders must have a user ID'                      unless @uid && @uid.is_a?(UUID)
+      raise 'Side must be either :bid or :ask'                unless [:bid, :ask].include?(@side)
+      raise 'Size must be a positive integer'                 if (@size && (!@size.is_a?(Fixnum) || @size <= 0))
+      raise 'Stop price must be a positive integer'           if (@stop_price && (!@stop_price.is_a?(Fixnum) || @stop_price <= 0))
+      raise 'Trailing percentage must be a positive integer'  if (@stop_percent && (!@stop_percent.is_a?(Fixnum) || @stop_percent <= 0 || @stop_percent >= TRL_STOP_PCT_MULTIPLIER))
+      raise 'Trailing offset must be a positive integer'      if (@stop_offset && (!@stop_offset.is_a?(Fixnum) || @stop_offset <= 0))
+      raise 'Expiration must be omitted or be an integer'     unless (@expiration.nil? || (@expiration.is_a?(Fixnum) && @expiration > 0))
+      raise 'The order creation timestamp can''t be nil'      if !@created_at
+
+      if (((@stop_price && 1 )|| 0) + ((@stop_percent && 1 ) || 0) + ((@stop_offset && 1) || 0)) > 1
+        raise 'Stop orders must specify exactly one of either stop price, trailing percentage, or trailing offset.'
+      end
     end
 
     #
@@ -43,6 +56,28 @@ module Gekko
           is_a?(MarketOrder) || (bid? && (price >= limit_order.price)) || (ask? && (price <= limit_order.price))
         end
       end
+    end
+
+    #
+    # Returns +true+ if the order is a STOP order, +false+ otherwise
+    #
+    # @return [Boolean] Whether this order is a STOP
+    #
+    def stop?
+      !!(stop_price || stop_percent || stop_offset)
+    end
+
+    #
+    # Returns +true+ if the given price should trigger this order's execution.
+    #
+    # @param p [Fixnum] The price to which we want to compare the STOP price
+    # @return [Boolean] Whether this order should trigger
+    #
+    def should_trigger?(p)
+      p || raise("Provided price can't be nil")
+      stop? || raise("Called Order#should_trigger? on a non-stop order")
+
+      (bid? && (stop_price <= p)) || (ask? && (stop_price >= p))
     end
 
     #

@@ -5,16 +5,21 @@ module Gekko
   #
   class BookSide < Array
 
-    attr_accessor :side
+    attr_accessor :side, :stops
 
     def initialize(side, opts = {})
+      super()
+
       raise "Incorrect side <#{side}>" unless [:bid, :ask].include?(side)
-      @side = side
+      @side   = side
+      @stops  = []
 
       if opts[:orders]
         opts[:orders].each_with_index { |obj, idx| self[idx] = Order.from_hash(obj) }
         sort!
       end
+
+      opts[:stops].each_with_index { |obj, idx| stops[idx] = Order.from_hash(obj) } if opts[:stops]
     end
 
     #
@@ -62,6 +67,20 @@ module Gekko
     #
     def bid_side?
       side == :bid
+    end
+
+    #
+    # Removes the expired book orders and STOPs from this side
+    #
+    def remove_expired!
+      [self, stops].each do |orders|
+        orders.reject! do |order|
+          if order.expired?
+            yield(order.message(:done, reason: :expired))
+            true
+          end
+        end
+      end
     end
 
   end

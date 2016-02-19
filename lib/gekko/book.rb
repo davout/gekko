@@ -32,7 +32,17 @@ module Gekko
     # @param order [Order] The order to execute
     #
     def receive_order(order)
-      raise 'Order must be a Gekko::LimitOrder or a Gekko::MarketOrder' unless [LimitOrder, MarketOrder].include?(order.class)
+      raise "Order must be a Gekko::LimitOrder or a Gekko::MarketOrder."      unless [LimitOrder, MarketOrder].include?(order.class)
+      raise "Can't receive a new STOP before a first trade has taken place."  if order.stop? && ticker[:last].nil?
+
+      # We need to initialize the stop_price for trailing stops if necessary
+      if order.stop? && !order.stop_price
+        if order.stop_price
+          order.stop_price = ticker[:last] + order.stop_percent / Gekko::Order::TRL_STOP_PCT_MULTIPLIER * (order.bid? ? 1 : -1)
+        elsif order.stop_offset
+          order.stop_price = ticker[:last] + order.stop_offset * (order.bid? ? 1 : -1)
+        end
+      end
 
       # The side from which we'll pop orders
       opposite_side = order.bid? ? asks : bids
@@ -40,57 +50,62 @@ module Gekko
       if received.has_key?(order.id.to_s)
         tape << order.message(:reject, reason: :duplicate_id)
 
-      elsif order.expired?
-        tape << order.message(:reject, reason: :expired)
-
-      elsif order.post_only && order.crosses?(opposite_side.first)
-        tape << order.message(:reject, reason: :would_execute)
-
       else
-        old_ticker = ticker
-
         self.received[order.id.to_s] = order
-        tape << order.message(:received)
 
-        order_side    = order.bid? ? bids : asks
-        next_match    = opposite_side.first
-        prev_match_id = nil
+        if order.expired?
+          tape << order.message(:reject, reason: :expired)
 
-        while !order.done? && order.crosses?(next_match)
-          # If we match against the same order twice in a row, something went seriously
-          # wrong, we'd rather noisily die at this point.
-          raise 'Infinite matching loop detected !!' if (prev_match_id == next_match.id)
-          prev_match_id = next_match.id
+        elsif order.stop? && !order.should_trigger?(ticker[:last])
+          (order.ask? ? asks : bids).stops << order # Add the STOP to the list of currently active STOPs
 
-          if next_match.expired?
-            tape << opposite_side.shift.message(:done, reason: :expired)
-            next_match = opposite_side.first
+        elsif order.post_only && order.crosses?(opposite_side.first)
+          tape << order.message(:reject, reason: :would_execute)
 
-          elsif order.uid == next_match.uid
-            # Same user/account associated to order, we cancel the next match
-            tape << opposite_side.shift.message(:done, reason: :canceled)
-            next_match = opposite_side.first
+        else
+          old_ticker = ticker
+          tape << order.message(:received)
 
-          else
-            execute_trade(next_match, order)
+          order_side    = order.bid? ? bids : asks
+          next_match    = opposite_side.first
+          prev_match_id = nil
 
-            if next_match.filled?
-              tape << opposite_side.shift.message(:done, reason: :filled)
+          while !order.done? && order.crosses?(next_match)
+            # If we match against the same order twice in a row, something went seriously
+            # wrong, we'd rather noisily die at this point.
+            raise 'Infinite matching loop detected !!' if (prev_match_id == next_match.id)
+            prev_match_id = next_match.id
+
+            if next_match.expired?
+              tape << opposite_side.shift.message(:done, reason: :expired)
               next_match = opposite_side.first
+
+            elsif order.uid == next_match.uid
+              # Same user/account associated to order, we cancel the next match
+              tape << opposite_side.shift.message(:done, reason: :canceled)
+              next_match = opposite_side.first
+
+            else
+              execute_trade(next_match, order)
+
+              if next_match.filled?
+                tape << opposite_side.shift.message(:done, reason: :filled)
+                next_match = opposite_side.first
+              end
             end
           end
-        end
 
-        if order.filled?
-          tape << order.message(:done, reason: :filled)
-        elsif order.fill_or_kill?
-          tape << order.message(:done, reason: :killed)
-        else
-          order_side.insert_order(order)
-          tape << order.message(:open)
-        end
+          if order.filled?
+            tape << order.message(:done, reason: :filled)
+          elsif order.fill_or_kill?
+            tape << order.message(:done, reason: :killed)
+          else
+            order_side.insert_order(order)
+            tape << order.message(:open)
+          end
 
-        tick! unless (ticker == old_ticker)
+          tick! unless (ticker == old_ticker)
+        end
       end
     end
 
@@ -154,7 +169,8 @@ module Gekko
       prev_ask = ask
 
       order = received[order_id.to_s]
-      dels = order.bid? ? bids.delete(order) : asks.delete(order)
+      s = order.bid? ? bids : asks
+      dels = s.delete(order) || s.stops.delete(order)
       dels && tape << order.message(:done, reason: :canceled)
 
       tick! if (prev_bid != bid) || (prev_ask != ask)
@@ -168,12 +184,7 @@ module Gekko
       prev_ask = ask
 
       [bids, asks].each do |bs|
-        bs.reject! do |order| 
-          if order.expired?
-            tape << order.message(:done, reason: :expired)
-            true
-          end
-        end
+        bs.remove_expired! { |tape_msg| tape << tape_msg }
       end
 
       tick! if (prev_bid != bid) || (prev_ask != ask)
