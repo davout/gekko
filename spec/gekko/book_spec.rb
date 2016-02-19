@@ -90,6 +90,30 @@ describe Gekko::Book do
     end
 
     describe '#receive_order' do
+      context 'when receiving a STOP order' do
+        it 'should execute it immediately if the STOP price is already reached' do
+          pending
+        end
+
+        it 'should add it to the active STOPs on the correct book side' do
+          pending
+        end
+      end
+
+      context 'with currently active STOP orders' do
+        it 'should execute and remove the STOPs that had their price crossed' do
+          pending
+        end
+
+        it 'should update trailing STOPs when the price moves in favor of the trader' do
+          pending
+        end
+
+        it 'should not update trailing STOPs when the price moves against the trader' do
+          pending
+        end
+      end
+
       it 'should remove expired orders as they come during executions' do
         @book.bids[0].expiration = @book.bids[1].expiration = (Time.now.to_i - 1)
         @book.receive_order(Gekko::LimitOrder.new(:ask, random_id, random_id, 2_0000_0000, 200_0000))
@@ -381,6 +405,10 @@ describe Gekko::Book do
         @book.cancel(@best_bid_oid)
         expect(@book.tape.last).to include({ type: :ticker, bid: 400_0000 })
         expect(@book.tape[@book.tape.length - 2]).to include({ type: :done, reason: :canceled })
+      end
+
+      it 'should cancel a currently active STOP order' do
+        pending
       end
     end
   end
