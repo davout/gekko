@@ -292,8 +292,8 @@ module Gekko
     #
     def self.from_hash(hsh)
       book = Book.new(hsh[:pair], {
-        bids: BookSide.new(:bid, orders: hsh[:bids].map { |o| symbolize_keys(o) }),
-        asks: BookSide.new(:ask, orders: hsh[:asks].map { |o| symbolize_keys(o) })
+        bids: BookSide.from_hash(:bid, hsh[:bids]),
+        asks: BookSide.from_hash(:ask, hsh[:asks])
       })
 
       [:bids, :asks].each { |s| book.send(s).each { |ord| book.received[ord.id.to_s] = ord } }

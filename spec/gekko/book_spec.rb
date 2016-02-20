@@ -67,10 +67,10 @@ describe Gekko::Book do
         end
 
         it 'should import and export currently active STOPs' do
-          taker = Gekko::LimitOrder.new(:ask, random_id, random_id, 1_0000_0000, 100_0000)
           stop = Gekko::LimitOrder.new(:ask, random_id, random_id, 1_0000_0000, 100_0000, { stop_offset: 100_0000 })
-          book.receive_order(taker)
           expect { book.receive_order(stop) }.to change { stop.stop_price }.from(nil).to(400_0000)
+          #puts book.serialize
+          #puts Gekko::Book.deserialize(book.serialize).asks.stops
           expect(Gekko::Book.deserialize(book.serialize).asks.stops.first.stop_offset).to eql(100_0000)
         end
 
@@ -78,8 +78,8 @@ describe Gekko::Book do
           Timecop.freeze(Time.now + 60) do
             book.receive_order(Gekko::LimitOrder.new(:bid, random_id, random_id, 42_0000_0000, 300_0000))
             bogus_book = Oj.load(book.serialize)
-            bogus_book['bids'].reverse!
-            bogus_book['asks'].reverse!
+            bogus_book['bids']['orders'].reverse!
+            bogus_book['asks']['orders'].reverse!
 
             reserialized_bogus = Oj.load(Gekko::Book.deserialize(bogus_book.to_json).serialize)
             serialized_normal = Oj.load(book.serialize)

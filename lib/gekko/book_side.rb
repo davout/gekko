@@ -5,6 +5,8 @@ module Gekko
   #
   class BookSide < Array
 
+    include Serialization
+
     attr_accessor :side, :stops
 
     def initialize(side, opts = {})
@@ -28,7 +30,21 @@ module Gekko
     # @return [Hash] The serializable representation
     #
     def to_hash
-      map(&:to_hash)
+      { orders: map(&:to_hash), stops: stops.map(&:to_hash) }
+    end
+
+    #
+    # Returns a +Gekko::BookSide+ instance from a hash
+    #
+    # @param side [Symbol] Either +:bid+ or +:ask+
+    # @param h [Hash] The hash representation of a book side
+    # @return [Gekko::BookSide] The represented book side
+    #
+    def self.from_hash(side, h)
+      h = symbolize_keys(h)
+      bs = new(side, orders: h[:orders].map { |o| symbolize_keys(o) })
+      bs.stops = h[:stops].map { |o| Gekko::Order.from_hash(symbolize_keys(o)) }
+      bs
     end
 
     #

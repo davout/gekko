@@ -164,6 +164,16 @@ module Gekko
         hsh[:remaining_quote_margin] = remaining_quote_margin
       end
 
+      if stop?
+        hsh.merge!({
+          stop: {
+            price:   stop_price,
+            offset:  stop_offset,
+            percent: stop_percent
+          }
+        })
+      end
+
       hsh
     end
 
@@ -174,7 +184,16 @@ module Gekko
     # @return [Gekko::Order] A trade order
     #
     def self.from_hash(hsh)
-      (hsh[:price] ? LimitOrder : MarketOrder).from_hash(hsh)
+      order = (hsh[:price] ? LimitOrder : MarketOrder).from_hash(hsh)
+
+      if hsh[:stop]
+        hsh[:stop] = symbolize_keys(hsh[:stop])
+        order.stop_price    = hsh[:stop][:price]
+        order.stop_offset   = hsh[:stop][:offset]
+        order.stop_percent  = hsh[:stop][:percent]
+      end
+
+      order
     end
 
     #
