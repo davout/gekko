@@ -69,8 +69,6 @@ describe Gekko::Book do
         it 'should import and export currently active STOPs' do
           stop = Gekko::LimitOrder.new(:ask, random_id, random_id, 1_0000_0000, 100_0000, { stop_offset: 100_0000 })
           expect { book.receive_order(stop) }.to change { stop.stop_price }.from(nil).to(400_0000)
-          #puts book.serialize
-          #puts Gekko::Book.deserialize(book.serialize).asks.stops
           expect(Gekko::Book.deserialize(book.serialize).asks.stops.first.stop_offset).to eql(100_0000)
         end
 
