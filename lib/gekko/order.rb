@@ -184,13 +184,14 @@ module Gekko
     # @return [Gekko::Order] A trade order
     #
     def self.from_hash(hsh)
-      order = (hsh[:price] ? LimitOrder : MarketOrder).from_hash(hsh)
+      h = symbolize_keys(hsh)
 
-      if hsh[:stop]
-        hsh[:stop] = symbolize_keys(hsh[:stop])
-        order.stop_price    = hsh[:stop][:price]
-        order.stop_offset   = hsh[:stop][:offset]
-        order.stop_percent  = hsh[:stop][:percent]
+      order = (h[:price] ? LimitOrder : MarketOrder).from_hash(h)
+
+      if h[:stop]
+        order.stop_price    = h[:stop][:price]
+        order.stop_offset   = h[:stop][:offset]
+        order.stop_percent  = h[:stop][:percent]
       end
 
       order

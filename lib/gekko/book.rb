@@ -291,13 +291,15 @@ module Gekko
     # @return [Gekko::Book] The loaded book instance
     #
     def self.from_hash(hsh)
+      h = symbolize_keys(hsh)
+
       book = Book.new(hsh[:pair], {
-        bids: BookSide.from_hash(:bid, hsh[:bids]),
-        asks: BookSide.from_hash(:ask, hsh[:asks])
+        bids: BookSide.from_hash(:bid, h[:bids]),
+        asks: BookSide.from_hash(:ask, h[:asks])
       })
 
       [:bids, :asks].each { |s| book.send(s).each { |ord| book.received[ord.id.to_s] = ord } }
-      book.tape = Tape.from_hash(symbolize_keys(hsh[:tape])) if hsh[:tape]
+      book.tape = Tape.from_hash(h[:tape]) if h[:tape]
 
       book
     end

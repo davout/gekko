@@ -42,8 +42,8 @@ module Gekko
     #
     def self.from_hash(side, h)
       h = symbolize_keys(h)
-      bs = new(side, orders: h[:orders].map { |o| symbolize_keys(o) })
-      bs.stops = h[:stops].map { |o| Gekko::Order.from_hash(symbolize_keys(o)) }
+      bs = new(side, orders: h[:orders])
+      bs.stops = h[:stops].map { |o| Gekko::Order.from_hash(o) }
       bs
     end
 
