@@ -179,7 +179,7 @@ module Gekko
     def self.from_hash(hsh)
       tape = Tape.new
 
-      tape.instance_variable_set(:@cursor, hsh[:cursor])
+      tape.instance_variable_set(:@cursor, hsh[:cursor]) if hsh[:cursor]
 
       hsh[:events].each do |evt|
         e = symbolize_keys(evt)
